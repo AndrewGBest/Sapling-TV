@@ -1,240 +1,116 @@
-# TV-style Prime Video client for Linux HTPCs: design document
+# Sapling TV: design notes
 
-13 November 2026 · Draft 1 · Project name: **Tropic Video**. This is the original design study; later decisions are in `DECISIONS.md` and current state in `STATUS.md`.
+17 November 2026. Labels: **[Seen]** observed on the live site in this
+project's shell, with the date; **[Sourced]** read in a source listed at the
+end; **[Guess]** reasoning with no source.
 
-Labels used throughout: **[Sourced]** means I read it in a source or in the repo code. **[Guess]** means my own reasoning with no source. I am not a lawyer; the legal section is a risk map, not legal advice.
+The general design (wrap the service's website in a castLabs Electron shell;
+add an original remote layer in the preload's isolated world; never touch DRM
+or the service's scripts) comes unchanged from Tropic Video's design study,
+`docs/DESIGN.md` in github.com/AndrewGBest/Tropic-Video, sections 1 to 5. Read
+that for the reasoning and the prior art (VacuumTube, Vacuumflix). This
+document records only what is different about this service.
 
 ## 1. Summary
 
-**Recommendation:** build it the VacuumTube way, not the Vacuumflix way. A thin Chromium-based shell loads the normal primevideo.com site, and an original "10-foot layer" (your own code and CSS) adds controller navigation, a TV-scale layout, a player HUD and an on-screen keyboard.
+- **Playback works in the shell, on castLabs Electron 42.** A signed-in run on
+  2026-11-17 played an included episode with protected video, MediaKeys
+  attached and time advancing **[Seen]**. On castLabs Electron 44 the same
+  episode failed with the site's "An Error Occurred" because the build claims
+  Dolby audio support it cannot decode (section 3).
+- **Browsing works with the generic layer plus two adapter entries** (shelf
+  arrows, card menu buttons) **[Seen]**.
+- **Signing in with only a remote is not possible yet.** The form is inside a
+  frame, and the layer stops at frame boundaries (section 5).
 
-**What this delivers:** a native-feeling, controller-driven Prime Video app for an HTPC, installable as a Flatpak, with no Amazon code in the repo and no DRM tampering.
+## 2. What the website gives us
 
-**What it does not deliver:** Amazon's actual living-room interface. Getting that one means running Amazon's proprietary TV bundle the way Vacuumflix runs Netflix's, and every route to that carries the legal problems you asked to avoid (section 4, option C).
-
-**Playback quality:** standard definition. Amazon's own help page limits non-Windows, non-macOS computers to SD [Sourced].
-
-## 2. Prior art: what the two repos actually do
-
-I cloned both repos and read the code.
-
-### VacuumTube (shy1132/VacuumTube, MIT)
-
-- **Shell:** stock Electron 44, about 1,600 lines in the main process [Sourced: package.json, src/].
-- **UI source:** loads `https://www.youtube.com/tv`, Google's own hosted TV web app. Nothing of YouTube's is stored in the repo [Sourced: src/index.js].
-- **Identity:** sends a user agent in the format of Cobalt, the engine TV YouTube apps run on, but with its own brand name "VacuumTube" in the device field [Sourced: src/ua.js].
-- **Controller:** polls the browser Gamepad API every frame, prefers the Steam Input virtual pad, applies a 500 ms repeat delay and 100 ms repeat interval, and emits synthetic key events the page already understands [Sourced: src/preload/util/controller.js].
-- **Extras:** about 40 preload modules (settings overlay, userstyles, volume, speed, touch), plus response-header edits to relax the page's content security policy [Sourced].
-- **Packaging:** Flatpak on Flathub, AppImage, deb, tarball [Sourced].
-
-**Why it is the clean pattern:** it wraps a page the service itself hosts, and adds its own code on top.
-
-### Vacuumflix (Ciphay/Vacuumflix, MIT)
-
-- **Runtime:** a Node.js host (`port2/runtime/host.js`, about 1,500 lines) that runs Netflix's TV scripts inside a `vm` context and fakes the device platform they expect, plus an SDL2/OpenGL ES renderer in C and a C++ process that loads the Widevine library directly [Sourced].
-- **What is in the repo:** Netflix's TV UI JavaScript (pinned release, tens of MB), Netflix Sans font files, Netflix icons, the boot animation, and Google's `libwidevinecdm.so` binary (21 MB) [Sourced: tvui/, port2/assets/, port2/cdm/].
-- **Other things I saw:** the desktop entry names the app "Netflix", the host patches the downloaded Netflix script before running it, and it generates its own device serial with a Netflix-style prefix [Sourced: host.js].
-
-**Why it is the pattern to avoid:** the engineering is impressive, but it redistributes another company's code, fonts and logo, redistributes Google's CDM, uses the service's name as the app name, and presents itself to the server as a device class it is not. Its README disclaimer acknowledges the bundled material belongs to Netflix and Google [Sourced].
-
-## 3. What Prime Video gives us to build on
-
-- **Web player on Linux is officially supported**, at SD [Sourced: Prime Video system requirements].
-- **The TV app is not a web page.** Amazon describes a C++ engine installed on the device plus a bundle downloaded at launch, now a Rust UI compiled to WebAssembly [Sourced: Amazon Science, QCon talk]. There is no public equivalent of youtube.com/tv to point a wrapper at [Guess: I found none; absence is not proof].
-- **Widevine in Electron:** stock Electron has none. castLabs' Electron fork (ECS) adds it and fetches the CDM at runtime through Chromium's component updater [Sourced]. On Linux the CDM reports an unverified platform status and has no persistent licences [Sourced: castLabs release notes].
-- **Risk:** the prime-wine author reported that Electron plus Widevine was "quite tricky" with Prime specifically [Sourced]. Whether Prime issues a licence to ECS on Linux is the single biggest unknown, so it is the first thing to test.
-- **Existing alternative today:** the community Kodi add-on for Prime Video already gives a remote-driven interface on Linux, using Kodi's own UI and the Widevine library [Sourced]. If you just want something working this week, that is it. The rest of this document assumes you want a standalone app.
-
-## 4. Approach options
-
-| | A. Wrap the website + original TV layer | B. Fully original UI on Amazon's private APIs | C. Run Amazon's real TV bundle |
-|---|---|---|---|
-| Model | VacuumTube | Kodi add-on | Vacuumflix |
-| Amazon code in your repo | None | None | Yes, or fetched and patched at runtime |
-| DRM path | Browser's own EME + stock CDM | Your own CDM host | Your own CDM host + device impersonation |
-| Looks like a TV app | Mostly (restyled web UI) | Yes (your design) | Yes (Amazon's design) |
-| Breaks when Amazon changes things | Selectors break; fixable in hours | API calls break; fixable in days | Engine interface breaks; weeks |
-| Legal exposure [Guess] | Lowest | Medium: undocumented API use, terms of use | Highest: copyright, anti-circumvention, trademark |
-| Effort [Guess] | 4 to 8 weeks part-time | 3 to 6 months | 6+ months, specialist reverse engineering |
-
-**Choice: A.** A later step toward B's look (an own home screen) was considered in the first version and dropped on 2026-11-14: the site's interface with zoom is good enough on a TV (section 5.2).
-
-## 5. Recommended architecture
-
-```
-┌──────────────────────────────────────────────────────────┐
-│ Shell (main process)                                     │
-│  window/fullscreen · profile dir · idle inhibit · MPRIS  │
-│  CEC helper · config · updater for the site adapter      │
-├──────────────────────────────────────────────────────────┤
-│ Chromium web view  →  https://www.primevideo.com         │
-│  stock Widevine CDM via EME (untouched)                  │
-├──────────────────────────────────────────────────────────┤
-│ Remote layer (injected, all original code)               │
-│  input router → spatial navigation → focus ring          │
-│  page zoom · on-screen keyboard · short messages         │
-│  site adapter (selectors.json)                           │
-└──────────────────────────────────────────────────────────┘
-```
-
-### 5.1 Shell: two candidates, decided by a spike
-
-1. **castLabs Electron (ECS).** One self-contained app, same structure as VacuumTube, and the CDM is downloaded from Google at first run so you never redistribute it [Sourced].
-2. **Fallback: drive the user's installed Chromium or Chrome.** Launch it in app/kiosk mode with a dedicated profile and inject the layer over the DevTools protocol. This is exactly the browser Amazon says it supports on Linux, so playback should behave as it does today [Guess]. Cost: depends on a system browser, and is less tidy to package.
-
-**Identity:** send an honest browser user agent. Unlike YouTube, there is no TV endpoint to unlock, so there is nothing to gain from posing as a TV, and posing as one is where option C's legal trouble starts.
-
-### 5.2 The remote layer
-
-**Direction (Andrew, 2026-11-14): the service's own interface is the
-interface.** With page zoom it already reads well on a TV, so the app does not
-build a second one. The effort goes into remote coverage: every screen and
-control reachable with a D-pad, focus that is always visible and predictable,
-and clear feedback. The layer draws something of its own only where the
-site's interface cannot be used with a remote at all.
-
-What the layer does:
-
-- **Spatial navigation.** Collect focusable elements (links, buttons, cards, styled options) and on each direction press pick the nearest by geometry. Rows remember where you were. Carousels turn at their edge. Hidden duplicates and backdrop links are ignored. Generic first; the adapter only where generic fails.
-- **Scale.** Ordinary page zoom to a 960x540 canvas (2x at 1080p). No restyling of the site.
-- **Focus feedback.** One ring, drawn by the layer, and a slight growth of the focused card. Short messages (a toast) when something is refused or saved.
-- **The site's player, driven by the remote.** Play, pause and seek are real key presses the site's player acts on. Up or down reveals the site's own control bar and menus and moves focus through them. Back closes a menu, then the player. No separate transport bar.
-- **Menus that need a pointer.** Hover-only menus are opened by resting the pointer on them.
-- **Site adapter.** One small data file of selectors, each backed by an outline from the live site, for the few things the generic rules cannot find (search opener, player container, carousel arrows, purchase controls).
-
-What the layer draws itself, and why each is necessary:
-
-| Own UI | Why the site's interface cannot do it |
+| Thing | What was seen (2026-11-17, unless marked) |
 |---|---|
-| Focus ring, focused-card growth, edge bump and press pulse | The site shows focus for a mouse or Tab key, not for a D-pad at a distance, and gives no sign that a key was heard when nothing can move. |
-| On-screen keyboard | A remote has no letters; without it search is unusable. |
-| Toast messages | Somewhere to say "blocked" or "saved" from the layer. |
-| "Page blocked" notice | Shown when nothing has loaded, so the window is not blank. |
-| About and help panel | The non-affiliation notice must be shown in the app, and a remote user needs to be told the keys. |
+| Start address | `https://tv.apple.com/`. Signed out it is a marketing page with plan buttons; signed in it redirects to the service's channel page in the account's storefront. The catalogue is also browsable signed out at `/<country>/channel/apple-tv/tvs.sbd.4000`. **[Seen]** |
+| Storefront and location | Paths start with a country code. When it differs from where the viewer is, a fixed banner across the bottom of every page offers another country; it covers the bottom 100 CSS pixels, including a title's play button. **[Seen]** |
+| Page structure | A single-page app. The window does not scroll: a screen-sized box inside it does. Rows ("shelves") scroll sideways, show four or five cards, and hold the rest as `aria-hidden` placeholders until the shelf's own arrow is pressed. Each card has a small menu button. **[Seen]** |
+| Native-app links | "Open TV" and similar links go to the native app through its own URL scheme; the shell refuses them. **[Seen]** |
+| Sign-in | Opens a modal `<dialog>` holding a same-origin frame (`/includes/commerce/navigator`), which holds a further frame from `idmsa.apple.com`. The first step asks for an email. **[Seen]** |
+| Profiles | A "Who's Watching?" picker appears after sign-in. Its structure has not been inspected. **[Seen]** that it exists. |
+| Player | Opens in a `<dialog>`; its controls are custom elements with shadow roots. H.264 video, CBCS-encrypted, about 860x360 for a widescreen episode. Audio offered as AC-3 or E-AC-3 5.1 when the browser says it supports them. **[Seen]** through Chromium's media diagnostics |
+| Browser support | Apple's support guide says the service can be watched in a web browser on a computer; a search summary named Chrome and Firefox. The guide itself returned 404 in every locale when fetched, so its exact wording is unread. **[Sourced, weak]** |
 
-What is deliberately not built (changed from the first version of this document):
+## 3. Dolby audio and the Electron version
 
-- **No player HUD.** The site's control bar is used as it is.
-- **No home screen, splash or restyled pages.** No trimming of the site's header and no forcing or hiding of its menus with CSS.
-- **Settings, About and exit confirmation** stay as small as they can be when they are built; they are needed for remapping and the non-affiliation notice, not as a showcase.
+castLabs turned on Chromium's `enable_platform_ac3_eac3_audio` build flag
+starting with v43.0.0-alpha.1 **[Sourced: castlabs/electron-releases#221]**.
+The flag makes the browser report AC-3 and E-AC-3 as supported and hands them
+to a platform decoder; Linux has none, which castLabs' own engineer noted in
+the same issue. On this site that matters: the site believes the browser,
+serves Dolby audio, the audio decoder fails (`DECODER_ERROR_NOT_SUPPORTED`,
+FFmpeg `kUnsupportedConfig`) and the player shows a generic error **[Seen]**.
 
-A new piece of own UI needs the same justification as the rows in the table:
-name the thing a remote user cannot do with the site's interface.
+castLabs Electron 42.11.18 predates the flag, reports both codecs as
+unsupported, gets AAC from the site, and plays **[Seen]**. The project pins it
+until one of these changes; see `DECISIONS.md` (2026-11-17) for the trade-off
+and the alternative.
 
-Sign-in happens on the service's own page. The on-screen keyboard can type
-into its fields, passwords and one-time codes included, so a TV box with only
-a remote can sign in. Each pick is passed to the page as typed text and
-nothing is read back, stored or logged. Scripted runs (`--automation`) never
-type into password or code fields.
+## 4. Remote navigation on this site
 
-### 5.3 System integration
+What the generic layer from Tropic Video does well here **[Seen]**: moving
+through the top bar, banners, plan buttons and down through shelves; the
+purchase guard on trial, bundle and plan buttons under `--automation`.
 
-- Inhibit screensaver and idle while video plays. Vacuumflix needed a fix for exactly this under Steam's Game Mode [Sourced: v1.5.1 notes].
-- Detect gamescope/Steam and start fullscreen; `--fullscreen` flag for HTPC autostart.
-- MPRIS so media keys and desktop widgets work.
-- VA-API hardware decode flags, exposed as a setting.
+What needed adding:
 
-## 6. TV controls
+- **Shelf arrows** (`rowPrev`, `rowNext`): pressed by the layer at a shelf's
+  edge, never focused. After a turn, focus moves to the first card now shown,
+  once the shelf has stopped scrolling.
+- **Card menu buttons** (`notFocusable`, a new adapter key): otherwise every
+  second Right press lands on one. Their actions are on the title page too.
+- **The page's own scroller** (`pageScroller`): scrolling is done in the box
+  that scrolls the page, not the window.
 
-| Action | Gamepad | Keyboard / IR remote (acts as keyboard) | HDMI-CEC |
-|---|---|---|---|
-| Move focus | D-pad, left stick | Arrows | Arrows |
-| Select | A | Enter | OK |
-| Back | B | Backspace, Esc | Back |
-| Play/pause | X, or A in player | Space, media key | Play, Pause |
-| Seek ±10 s | LB / RB, or left/right in player | Left / Right in player | Rewind, Fast-forward |
-| Search | Y | / | (coloured key) |
-| Settings | R3 | Ctrl+O | (coloured key) |
-| Subtitles/audio | Up in player | C | Subtitle |
-| Volume | Right stick, or leave to the AVR | + / − | TV handles it |
-| Exit | Hold B | Ctrl+Q | Exit |
+Still to solve (see `STATUS.md`): the play button under the country banner,
+Down from a title's description skipping the play button, frames (next
+section), and the player's controls inside shadow roots.
 
-- **Gamepad:** Gamepad API polling in the page, Steam Input pad preferred, repeat delay and interval as in VacuumTube.
-- **CEC:** a small optional helper using libcec that turns remote presses into key events. Most mini PCs need a USB CEC adapter for this [Guess].
-- **All mappings** live in a config file and are remappable in settings.
+## 5. Frames: the design for sign-in and pop-ups in frames
 
-## 6a. TV layout reference (added 2026-11-14)
+The layer runs in the top frame's isolated world and hears keys only while
+keyboard focus is in the top document. When the site moves focus into a frame
+(sign-in does), the remote goes dead: arrows and Back do nothing, only the
+shell's Ctrl+Q still works **[Seen]**. Planned approach, in order:
 
-What the service's TV app looks like, from published descriptions, used as
-the reference for layout under guardrail 2 below. No image of it is kept here.
+1. **Same-origin frames** (the sign-in form): the isolated world can reach a
+   same-origin frame's document. The top layer starts a second layer instance
+   on that document in frame mode: its own navigator, ring, on-screen keyboard
+   and purchase guard, and its own key listener. In frame mode Back never uses
+   history; it presses the pop-up's own close control or hands focus back to
+   the top page. **[Guess]** that this works from the isolated world;
+   extensions' content scripts do the same.
+2. **Cross-origin frames** (`idmsa.apple.com`): unreachable from the page. The
+   shell, which sees every key, is told when focus is in such a frame; it then
+   turns arrows into Tab and Shift+Tab, and Back into "take focus back to the
+   page". Under `--automation` the on-screen keyboard never opens there,
+   because the field type cannot be read (Hard rule 9).
+3. **Never trapped**: whatever happens in 1 and 2, Back from inside any frame
+   must get the user out.
 
-- A navigation bar runs across the top with Home, Movies, TV Shows, Sports and
-  Live TV, then a destination for what the membership includes, then add-on
-  subscriptions [Sourced: Engadget, July 2024].
-- Below the bar is a rotating banner ("hero rotator") for the selected
-  section; on living-room devices video plays in it automatically while
-  browsing [Sourced: Engadget].
-- Under that, rows of cards. The 2024 update added animations, quicker page
-  transitions and zoom effects [Sourced: Engadget, quoting Amazon].
-- The previous (2022) design had the menu down the left side instead
-  [Sourced: search summary of coverage; not read in full].
+## 6. Legal differences from Tropic Video
 
-The website the app loads already has this structure (bar, banner, rows), as
-seen on the live site in session 2. So the layer's job is the TV behaviour on
-top: remote navigation, couch-sized scale, a focused card that stands out and
-grows, banner and rows that move with the remote. How the TV app handles
-focus in detail (whether a focused card expands into a panel) was not found
-in a source and is not assumed.
+- Apple's guidelines for third parties forbid its marks in a product name,
+  any variation of them, and "an image of a real apple or other variation of
+  the Apple logo for any purpose" **[Sourced]**. Hence the name, and an icon
+  of a seedling with pointed leaves and no fruit.
+- The same guidelines allow a referential phrase such as "for" or "compatible
+  with" when the product really works with the Apple product **[Sourced]**.
+  The README and notice use "for watching Apple TV".
+- For text distributed outside the US, Apple asks for the attribution form
+  "_____ is a trademark of Apple Inc., registered in the U.S. and other
+  countries and regions" without symbols **[Sourced]**; the notice uses it.
 
-## 7. Legal guardrails
+## 7. Sources
 
-Design rules, each with the reason. Have a lawyer check anything you plan to distribute widely.
-
-1. **Ship none of Amazon's material.** No scripts, fonts, logos, artwork, sounds or screenshots of their UI in the repo or the package. Everything Amazon-owned arrives from Amazon's servers into the user's own session, as in any browser.
-2. **Borrow layout, never material.** (Changed 2026-11-14; this rule first said not to copy the look at all.) The layout and interaction patterns of Amazon's TV app may be used as a reference. None of its artwork, logos, icons, fonts, screenshots, text or code is copied, and the app must not pass itself off as the official one. See `DECISIONS.md`.
-3. **Leave DRM completely alone.** Use the stock CDM through the browser's standard interface. No key extraction, no patched CDM, no device-level spoofing to unlock HD, no recording or download feature. Canada's Copyright Act prohibits circumventing protection measures; its interoperability exception is written around lawfully obtained computer programs and is lost if the act infringes copyright [Sourced: s. 41.12]. Do not design anything that would need to lean on that exception.
-4. **Do not redistribute Widevine.** Let the shell fetch it from Google, or use the system browser's copy.
-5. **Keep Amazon's marks out of the name, app ID and icon.** Amazon's trademark guidelines list use in an application name as prohibited [Sourced], and Flathub requires a distinct name and icon [Sourced]. Describe compatibility in plain text only ("an unofficial TV-style front end for watching Prime Video"), with a clear non-affiliation notice.
-6. **No ad blocking or ad skipping, and no region workarounds.** Prime's terms say you may not disguise your location [Sourced]. Ad blocking on a paid, ad-tiered service is the feature most likely to draw a response [Guess]. This is a deliberate difference from VacuumTube.
-7. **No reverse engineering of Amazon's apps.** Write the site adapter only from the pages served to a logged-in browser. Do not decompile the Fire TV or Android TV app.
-8. **Be honest on the wire.** Real user agent, no fake device IDs, no automated or bulk requests; the app only does what the user does with the controller.
-9. **Account and terms-of-use risk stays with each user, and say so.** Amazon decides what counts as a compatible device and can change it [Sourced]. I did not read every clause of the terms, so treat "is a restyled browser session permitted" as unconfirmed.
-10. **Repo hygiene.** Permissive or GPL licence, disclaimer in the README, no telemetry, and a stated contact for rights-holder complaints.
-
-## 8. Packaging and distribution
-
-- **Flatpak first** (fits Fedora Kinoite, Bazzite and SteamOS), plus AppImage.
-- **Flathub caveats:** content must be legally redistributable, with non-redistributable parts fetched as extra data [Sourced]. Flathub also updated its policy in 2026 to reject apps and submissions made with generative AI [Sourced: Linuxiac, GamingOnLinux]. If AI tools help write this app, plan on your own Flatpak remote or GitHub releases instead.
-- **Autostart:** desktop entry with `--fullscreen`; optional non-Steam shortcut for Game Mode.
-
-## 9. Build plan
-
-| Phase | Goal | Done when |
-|---|---|---|
-| 0. Spike (2 evenings) | Does ECS Electron sign in and play a title on Linux? Does the Chromium + DevTools route? | One shell chosen, with the licence result written down |
-| 1. Navigable shell | Fullscreen window, spatial navigation, gamepad + keyboard, focus ring, TV zoom | Browse home → title → play using only a controller |
-| 2. Player and text entry | The site's player and its menus driven by the remote, on-screen keyboard for search, profile menu, skip and next-episode prompts | A full episode watched and the next one started from the couch |
-| 3. HTPC polish | Settings overlay, remapping, userstyles, idle inhibit, MPRIS, CEC helper, adapter auto-update | Runs for a week as the daily driver on one box |
-| 4. Packaging | Flatpak, AppImage, README, disclaimers | Clean install on a fresh Kinoite machine |
-| 5. Upkeep | Selector smoke test you run against the live site | A site change is detected and patched without a new build |
-
-## 10. Open questions and unverified points
-
-- Whether Prime grants a playback licence to ECS Electron on Linux. Phase 0 answers it.
-- Whether a TV-oriented web build of Prime Video exists at any reachable address. I found no evidence of one.
-- Whether branded Chrome still accepts the launch flags the fallback shell needs; Chromium may be required.
-- How stable primevideo.com's markup is, which sets the upkeep burden. Unknown until the adapter exists.
-- The exact Prime Video terms on modified or automated clients. I read the device and location clauses only.
-- Effort estimates in section 4 are my own guesses.
-- I could not read Vacuumflix's minified Netflix bundle in any meaningful way, and did not try to; conclusions about it come from the host code and file listing.
-
-## 11. Sources
-
-- Engadget, "Prime Video gets a much-needed UI overhaul with a new content bar and AI recommendations" (July 2024): https://www.engadget.com/prime-video-gets-a-much-needed-ui-overhaul-with-a-new-content-bar-and-ai-recommendations-120019397.html
-
-
-- VacuumTube repo (code read directly): https://github.com/shy1132/VacuumTube
-- Vacuumflix repo (code read directly): https://github.com/Ciphay/Vacuumflix
-- Vacuumflix 1.5.1 release notes: https://github.com/Ciphay/Vacuumflix/releases/tag/V1.5.1
-- Prime Video system requirements for computers: https://www.primevideo.com/help?nodeId=GUX9FYHU5D8LC9EJ
-- Amazon Science, how Prime Video updates its app for 8,000+ device types: https://amazon.science/blog/how-prime-video-updates-its-app-for-more-than-8-000-device-types
-- InfoQ, Rebuilding Prime Video UI with Rust and WebAssembly: https://www.infoq.com/presentations/prime-video-rust
-- castLabs Electron releases (Widevine, Linux limits): https://github.com/castlabs/electron-releases/releases
-- Parachord issue on stock Electron vs ECS Widevine: https://github.com/Parachord/parachord/issues/988
-- prime-wine: https://codeberg.org/NelloKudo/prime-wine
-- Kodi Prime Video add-on README: https://github.com/Sandmann79/xbmc
-- Copyright Act (Canada) s. 41.12: https://laws-lois.justice.gc.ca/eng/acts/C-42/section-41.12.html
-- Amazon Trademark Guidelines: https://affiliate-program.amazon.com/help/operating/amazonmarks/
-- Prime Video Terms of Use: https://www.primevideo.com/tou
-- Flathub app requirements: https://documentation-962.pages.dev/docs/for-app-authors/requirements
-- Flathub generative AI policy coverage: https://linuxiac.com/flathub-now-rejects-ai-assisted-apps-and-submissions/
+- Apple, Guidelines for Using Apple Trademarks and Copyrights: https://www.apple.com/legal/intellectual-property/guidelinesfor3rdparties.html
+- Apple trademark list (Apple TV, Apple TV+): https://www.apple.com/legal/intellectual-property/trademark/appletmlist.html
+- Apple Support, Watch in a web browser (returned 404 on 2026-11-17; content known only from a search summary): https://support.apple.com/en-gb/guide/tvplus/apdc0cb7ad64/web
+- castLabs Electron issue 221, "Enable chromium ac3-ec3 system decoding": https://github.com/castlabs/electron-releases/issues/221
+- castLabs Electron releases (Linux CDM notes, v42.11.18): https://github.com/castlabs/electron-releases/releases
+- Tropic Video design study: https://github.com/AndrewGBest/Tropic-Video/blob/main/docs/DESIGN.md

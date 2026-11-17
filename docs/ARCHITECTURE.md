@@ -12,7 +12,7 @@ main process (src/main)                    renderer: the service's web page
 │ permission allowlist      │              ├────────────────────────────────────┤
 │ user-origin tv.css        │  insertCSS   │ isolated world: preload + TV layer │
 │ sleep inhibit, diagnostics│ ◀──────────  │   shares the DOM, not the JS       │
-│ spike report              │  ipc tropic:msg  │                                    │
+│ spike report              │  ipc sapling:msg │                                    │
 └───────────────────────────┘              └────────────────────────────────────┘
 ```
 
@@ -21,7 +21,7 @@ main process (src/main)                    renderer: the service's web page
   and it does not patch the site's JavaScript.
 - **Nothing is exposed to the page.** There is no `contextBridge` API. The
   end-to-end test asserts the page sees no app globals.
-- **One IPC channel, `tropic:msg`,** carrying the four message kinds in
+- **One IPC channel, `sapling:msg`,** carrying the four message kinds in
   `src/shared/actions.ts`. The main process accepts it only from the top frame.
 
 ## Input pipeline
@@ -50,16 +50,38 @@ mapping function that takes the current mode:
   smaller element's extent on the cross axis) always beats an unaligned one.
   Left/right never leave the row. Up/down fall back to the nearest row.
 - `navigator.ts` gathers visible, enabled controls, drops wrappers that contain
-  another candidate, and focuses with a `data-tropic-focus` attribute plus real DOM focus.
+  another candidate, and focuses with a `data-sapling-focus` attribute plus real DOM focus.
 - The focus ring is drawn by the overlay over the element's rectangle, so it
   does not depend on the site's styles.
 
-## Site adapter (`adapters/primevideo.json`)
+## Site adapter (`adapters/appletv.json`)
 
 Data only: lists of selectors for extra focusable elements, the search field,
-the player close control and purchase controls. Parsed defensively; bad
-selectors are dropped. With an empty adapter the generic heuristics run. It is
-empty today because no selector has been observed on the live site yet.
+shelf arrows (`rowPrev`, `rowNext`: pressed at a row's edge, never focused),
+controls that are never focus targets (`notFocusable`), the player's
+container and close control, and purchase controls. Parsed defensively; bad
+selectors are dropped. With an empty adapter the generic heuristics run.
+Revision 2 holds the shelf arrows and the cards' menu buttons, each shown by
+an outline in `test/fixtures/outlines/` and checked by
+`test/adapter-evidence.test.ts`.
+
+## Where the service is named
+
+| What | Where |
+|---|---|
+| App name, log prefix, start address, adapter file | `src/shared/service.ts` |
+| Hosts the window may load | `src/main/hosts.ts` |
+| Non-affiliation notice and About panel | `src/shared/about.ts` (kept word for word with the README and `LEGAL-GUARDRAILS.md` by a test) |
+| Spend wording and URL patterns | `src/layer/guard/purchase-guard.ts` |
+| Marks that must not appear in package names | `scripts/check-rules.mjs` |
+| Selectors | `adapters/appletv.json` |
+
+## Page scrolling
+
+Some sites keep the window still and scroll a screen-sized box inside it
+(this one does). `pageScroller()` in `navigator.ts` finds that box; the
+first-screenful rule, the lost-focus recovery and held-key scrolling measure
+and scroll in it, falling back to the window.
 
 ## Safety mechanisms
 
@@ -93,7 +115,14 @@ empty today because no selector has been observed on the live site yet.
 - **Not testable without the live site:** protected playback, the real page's
   markup, sign-in, the player mode detection against the real player.
 
+## Shell version
+
+castLabs Electron 42.11.18 (Chromium 148), pinned because later castLabs
+builds advertise Dolby audio that Linux cannot decode; see `DECISIONS.md`,
+2026-11-17.
+
 ## Not built yet
 
-Player HUD, on-screen keyboard, settings screen, remapping, user styles, MPRIS,
-CEC helper, adapter auto-update, packaging beyond config. See `ROADMAP.md`.
+Frame support (the layer stops at frame boundaries; see `DESIGN.md` section
+5), player support for controls inside shadow roots, CEC helper, adapter
+auto-update. See `ROADMAP.md`.

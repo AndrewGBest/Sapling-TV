@@ -1,71 +1,64 @@
 # Roadmap
 
-Each phase lists what "done" means. Tick items only when verified, and note
-how in `STATUS.md`.
+Each phase lists what "done" means. Tick items only when verified on this
+service, and note how in `STATUS.md`. Much of the layer came from Tropic
+Video, where it was verified against another site; that does not count here
+until it is seen working on this one.
 
 ## Phase 0: playback spike (blocks everything else)
 
-- [x] Minimal shell that loads the site with spike probes (`npm run spike`)
-- [x] Run on a real Linux desktop: sign in, start a title, read `spike-report.json`
-- [x] Record the outcome in `DECISIONS.md`: castLabs Electron works, or switch to driving installed Chromium
+- [x] Load the site in the shell, signed out and signed in
+- [x] Sign in by hand and play an included title; read `spike-report.json`
+- [x] Record the outcome in `DECISIONS.md` (plays on castLabs Electron 42; fails on 44 for Dolby audio)
 
-**Done when:** a title plays in the shell, or the fallback shell is chosen with evidence.
+**Done when:** a title plays in the shell. Done 2026-11-17, in a VM.
 
 ## Phase 1: navigable shell
 
-- [x] Spatial navigation engine with tests
-- [x] Keyboard, remote-as-keyboard and gamepad input with repeat
-- [x] Focus ring overlay
-- [x] Navigation and permission allowlists, sandboxed preload
-- [x] Purchase guard for automation
-- [x] Diagnostics outline (Ctrl+Shift+D)
-- [x] End-to-end harness against a fixture
-- [x] Capture outlines from the live site: home, detail, player (search and profile menu were driven live without needing selectors)
-- [x] First evidence-based adapter revision
-- [ ] TV scaling (page zoom) tuned on a real 1080p TV
-- [x] Row memory: returning to a row restores the last focused card
+- [x] Spatial navigation, input, focus ring, allowlists, guard, diagnostics (inherited)
+- [x] Capture an outline from the live site and write the first adapter revision
+- [x] Shelves turn from the remote
+- [x] Focus scrolls into view on pages that scroll an inner box
+- [ ] Remote coverage walk, signed in: home, a title page, search, a film, a channel, settings menus
+- [ ] The play button: not under the country banner; reached by Down from the description
+- [ ] Profile picker from the remote (choosing a profile is Andrew's to try)
+- [ ] TV scaling tuned on a real 1080p TV
 
 **Done when:** home → title → play using only a controller, on the live site.
 
-## Phase 2: player and text entry
+## Phase 2: frames, player and text entry
 
-- [x] The site's own player controls reachable and usable from the remote (no separate HUD; see `DESIGN.md` 5.2)
-- [x] Subtitle and audio selection through the site's controls
-- [ ] Skip intro / next episode focus
-- [x] On-screen keyboard for search
-- [x] Profile menu and navigation dropdowns from the remote (switching profile itself not yet tried)
-- [x] Reliable back from the player
+- [ ] Same-origin frames: a second layer instance follows focus into them
+- [ ] Cross-origin frames: arrows become Tab, Back always gets out
+- [ ] Sign in with only a remote (Andrew)
+- [ ] Player: find the playing video and the site's controls (custom elements with shadow roots)
+- [ ] Play/pause and seek keys on this site's player
+- [ ] Subtitles and audio menus from the remote
+- [ ] Next episode from the couch
+- [ ] On-screen keyboard for search on this site
 
-**Done when:** an episode is watched and the next one started from the couch.
+**Done when:** sign in, then watch an episode and start the next one, from the couch.
 
 ## Phase 3: HTPC polish
 
-- [x] Config file with key remapping and zoom (edited by hand; no settings screen)
-- [x] Gamepad button remapping in the config file (unit-tested; no physical controller tried)
-- [x] MPRIS and media keys (Chromium's own; verified, nothing to build)
-- [ ] CEC helper (optional, separate process)
-- [ ] Idle inhibit verified under Wayland (done on KDE), X11 and gamescope
+- [ ] Config file, remapping, sleep inhibition, MPRIS, leaving-the-app pause: inherited, check here
 - [ ] Hardware decode flags
-- [ ] Adapter update channel (signed data file, fetched from the project's GitHub only)
-- [x] About panel with the non-affiliation notice
-- [x] Offline message with automatic retry (the notice page)
+- [ ] About panel shows this project's notice (wording done; panel not looked at)
 
 **Done when:** it runs for a week as the daily driver on one HTPC.
 
 ## Phase 4: packaging and release
 
-- [x] AppImage build verified locally and in CI (tarball built, not run)
-- [x] Flatpak bundle built in CI and launched once (attaching it to a release waits for the first tag)
-- [ ] Release workflow on tag
-- [ ] README install guide, screenshots that show no third-party artwork
+- [ ] Repository on GitHub; CI green
+- [ ] AppImage, tarball and Flatpak bundle built in CI and launched once
+- [ ] First pre-release
 - [x] Original icon
 - [ ] Lawyer review of `LEGAL-GUARDRAILS.md` before promoting the project
 
-**Done when:** a clean install works on a fresh Fedora Kinoite machine.
+**Done when:** a clean install works on a fresh machine.
 
 ## Phase 5: upkeep
 
-- [x] Live-site walk an agent can run on the VM (`npm run live:walk`, see `VM-SETUP.md`)
-- [ ] Remote coverage checklist: every page type and control walked with a D-pad, gaps listed in `STATUS.md`
-- [ ] Issue template for "the site changed" reports with an outline attached
-- [ ] Contributor guide
+- [x] Live-site walk tool (`npm run live:walk`)
+- [ ] Shared layer: decide whether to extract it into a package used by both apps
+- [ ] Issue template for "the site changed" reports (inherited; check wording)

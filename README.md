@@ -1,12 +1,13 @@
 # Sapling TV
 
-An unofficial TV-style front end for watching Prime Video on a Linux HTPC,
-driven by a game controller, remote or keyboard.
+An unofficial TV-style front end for watching Apple TV (the streaming
+service) on a Linux HTPC, driven by a game controller, remote or keyboard.
 
-**Status: early development, usable for testing.** Browsing, search, playback
-and the player's controls work from a keyboard-style remote on the two setups
-tried so far (a Fedora virtual machine and the owner's Linux TV box). It has
-not been tried with a physical game controller. See
+**Status: early development, not ready for everyday use.** Protected playback
+works in the app's shell, and browsing the catalogue with a keyboard-style
+remote works on the pages tried. Signing in with only a remote does not work
+yet: the sign-in form sits in an embedded frame the remote cannot reach (use a
+real keyboard and mouse to sign in for now). See
 [docs/STATUS.md](docs/STATUS.md) for exactly what has and has not been checked.
 
 > Sapling TV is an unofficial, independent project. It is not affiliated
@@ -23,22 +24,21 @@ it work from the couch. The interface you see is the service's own, enlarged
 for a TV. The app adds what a remote needs:
 
 - directional movement with a visible focus ring, through the site's pages,
-  menus, pop-ups and the player's own controls;
+  shelves, menus and pop-ups;
 - an on-screen keyboard for search;
 - play, pause and seek from the remote, sent to the site's player as ordinary
   key presses.
 
-You sign in on the service's own page, exactly as in a browser, with a real
-keyboard or the on-screen one. What you type goes to the page as typed text;
-the app does not read, store or log it.
+It is a sibling of [Tropic Video](https://github.com/AndrewGBest/Tropic-Video)
+and shares its design.
 
 ## What it is not
 
 - Not the service's own TV app. Its layout follows familiar TV conventions,
-  including that app's, but it contains none of the service's artwork, logos,
-  fonts or code.
-- Not a way to get higher quality than a Linux browser gets. The service limits
-  Linux computers to standard definition.
+  but it contains none of the service's artwork, logos, fonts or code.
+- Not a way to get higher quality than a Linux browser gets. Linux browsers
+  use a software-only DRM module and get a lower resolution; in testing the
+  picture was about 860 pixels wide.
 - Not an ad blocker, downloader or region unlocker, and it never will be.
 
 ## Controls
@@ -56,37 +56,26 @@ the app does not read, store or log it.
 | Quit | | Ctrl+Q |
 | Save a page outline for bug reports | | Ctrl+Shift+D |
 
-When another app comes to the front, playback is paused and the app goes
-silent; in fullscreen its window is also minimised, which stops the site's
-previews. Launching the app again brings it back. Playback stays paused
-until you press play.
+At the end of a shelf, Left or Right turns the shelf to show more.
 
 ## Installing
 
-Download from the repository's
-[Releases page](https://github.com/AndrewGBest/Tropic-Video/releases): an
-AppImage, a tarball and a Flatpak bundle, for 64-bit Intel/AMD Linux. Or build
-it yourself (below).
-
-- **AppImage:** make it executable and run it.
-- **Flatpak bundle:** `flatpak install --user TropicVideo-x86_64.flatpak`,
-  with the Flathub remote set up so its runtime can be fetched. It can reach
-  the network, the display, sound and game controllers, and none of your files.
+There is no release yet. Build it from source (below).
 
 The app downloads the Widevine component from Google the first time it runs;
 it is not included in the package. Playback needs that download to succeed.
 
 ## Building from source
 
-Needs Node.js 22+ and git.
+Needs Node.js 22+ and git, on 64-bit Intel/AMD Linux.
 
 ```
-git clone https://github.com/AndrewGBest/Tropic-Video.git
-cd Tropic-Video
+git clone https://github.com/AndrewGBest/Sapling-TV.git
+cd Sapling-TV
 npm ci
 npm run check     # typecheck, tests, build, rule checks
 npm start         # opens a development window
-npm run dist      # builds release/TropicVideo-x86_64.AppImage and a tarball
+npm run dist      # builds release/SaplingTV-x86_64.AppImage and a tarball
 ```
 
 ## Options
@@ -95,13 +84,13 @@ npm run dist      # builds release/TropicVideo-x86_64.AppImage and a tarball
 |---|---|
 | `--fullscreen` | Start fullscreen (the packaged app always does). |
 | `--zoom=<factor>` | Override the TV scale. The default fits the site to a 960x540 canvas: 2 on a 1080p screen. `--zoom=1` turns scaling off. |
-| `--automation` | For scripted runs: blocks purchase, rental, subscription and sign-up controls. |
+| `--automation` | For scripted runs: blocks purchase, rental, trial, subscription and sign-up controls. |
 
 ## Remapping keys
 
 Remotes send all sorts of keys. To map one, create `config.json` in the app's
-data folder and restart. The folder is `~/.config/tropic-video/`, or
-`~/.var/app/io.github.andrewgbest.TropicVideo/config/tropic-video/` for the
+data folder and restart. The folder is `~/.config/sapling-tv/`, or
+`~/.var/app/io.github.andrewgbest.SaplingTV/config/sapling-tv/` for the
 Flatpak:
 
 ```json

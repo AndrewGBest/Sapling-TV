@@ -21,13 +21,12 @@ in the VM, repeat it on bare metal before concluding anything.
 2. `npm run check` and `xvfb-run -a npm run e2e` (or `npm run e2e` on a
    desktop). Both must pass before changing anything.
 3. Read `CLAUDE.md`, then `docs/STATUS.md`.
-4. Run the spike. The first time, when nobody is signed in yet, Andrew
-   launches `npm run spike` himself and drives it by hand: the signed-out home
-   page redirects to an `/offers/` URL that the automation guard blocks (see
-   `DECISIONS.md`, 2026-11-13). The agent does not attach to that run. Once a
-   signed-in profile exists, use `npm run spike -- --automation`.
-   - Andrew signs in by hand in the window. The agent does not type
-     credentials or codes (Hard rule 9).
+4. Run the spike. Unlike Tropic Video's service, this site's signed-out
+   pages load under `--automation`, so the agent can start
+   `npm run spike -- --automation --dev --remote-debugging-port=9222` and
+   Andrew signs in by hand in that window when it is on his screen.
+   - Andrew signs in by hand. The agent does not type credentials, codes or
+     the account email (Hard rule 9), and never chooses a profile.
    - Start any included title and let it run for a minute.
    - Quit with Ctrl+Q. The report path is printed in the terminal at start
      (under `~/.config/` in a folder named after the app).
@@ -57,7 +56,16 @@ Then connect over the DevTools protocol as `test/e2e/fixture-smoke.mjs` does:
 send key events with `Input.dispatchKeyEvent`, read state with
 `Runtime.evaluate`, and take screenshots with `Page.captureScreenshot`.
 Protected video will probably appear black in screenshots; judge playback from
-the video element's `paused` and `currentTime` instead.
+the video element's `paused` and `currentTime` instead. This site puts parts
+of its player inside shadow roots, so search them too when looking for the
+video. When playback fails, Chromium's own media diagnostics (the DevTools
+`Media` domain, the same data as `chrome://media-internals`) say which
+decoder failed; that is how the Dolby audio problem was found.
+
+To try another Electron version without risking the signed-in profile, copy
+the user data folder to a scratch place and pass `--user-data-dir=<copy>`. An
+older Chromium may not read a newer profile safely; never point one at the
+real folder.
 
 The signed-in profile lives in the app's user data folder and persists between
 runs. Never copy it, commit it or print its contents.
@@ -85,13 +93,22 @@ this.
 2. Press Ctrl+Shift+D. A file appears in `<user data>/diagnostics/`.
 3. Read the outline. It holds tag names, structural attributes and lengths only.
    Confirm by eye that it has no titles or names before copying any of it.
-4. Add selectors to `adapters/primevideo.json` only for things the outline
+4. Add selectors to `adapters/appletv.json` only for things the outline
    shows, bump `revision`, set `verified` to true, and add a trimmed copy of the
    outline to `test/fixtures/outlines/` with a test that the selector matches.
+
+## Sharing the window
+
+The app window is on Andrew's desktop, and he may be looking at it or using
+it while an agent drives it over DevTools. Before driving, say what you are
+about to do. Stop any playback you start (it moves the account's resume
+point). Never change the profile, the storefront banner's country, or
+account settings.
 
 ## Things only Andrew does
 
 - Signing in, and any two-step verification.
 - Anything involving payment, rental, subscription or account settings.
 - Judging picture quality and how it feels on a real TV with a real remote.
-- Creating releases and choosing the final project name.
+- Creating releases.
+- Choosing a profile on the profile picker.
