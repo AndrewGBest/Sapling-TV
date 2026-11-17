@@ -126,6 +126,33 @@ export function edgeControl(from: Element, selectors: readonly string[], view: W
   return null;
 }
 
+/**
+ * What scrolls the page up and down: null for the window, or a box at least
+ * half the screen high that scrolls while the window stays still. Seen on the
+ * live site: its pages scroll such a box, and the window never moves.
+ */
+export function pageScroller(el: Element | null, view: Window): Element | null {
+  const doc = view.document;
+  for (let node = el?.parentElement ?? null; node && node !== doc.body && node !== doc.documentElement; node = node.parentElement) {
+    if (node.clientHeight < view.innerHeight * 0.5 || node.scrollHeight <= node.clientHeight + 8) continue;
+    const overflow = view.getComputedStyle(node).overflowY;
+    if (overflow === 'auto' || overflow === 'scroll' || overflow === 'overlay') return node;
+  }
+  return null;
+}
+
+/** How far the page has been scrolled down, in whichever thing scrolls it. */
+function scrolledDown(scroller: Element | null, view: Window): number {
+  return scroller ? scroller.scrollTop : view.scrollY;
+}
+
+/** Scrolls the page, in whichever thing scrolls it. */
+function scrollPage(scroller: Element | null, view: Window, opts: ScrollToOptions, by = false): void {
+  const target: Element | Window = scroller ?? view;
+  if (by) target.scrollBy(opts);
+  else target.scrollTo(opts);
+}
+
 export function rowOf(el: Element, view: Window): Element | null {
   let node = el.parentElement;
   for (let i = 0; node && i < 8; i++, node = node.parentElement) {
@@ -227,6 +254,8 @@ export class SpatialNavigator {
   /** When the last move was made, to tell a held key from single presses. */
   private lastMoveAt = 0;
   private rapid = false;
+  /** What scrolled the page at the last focus: null for the window. */
+  private scroller: Element | null = null;
 
   constructor(
     private readonly doc: Document,
@@ -392,9 +421,10 @@ export class SpatialNavigator {
       // more of the page loaded): carry on from what is on screen, not from the top.
       // If nothing is on screen yet, keep scrolling the way the key points
       // rather than jumping to the bar at the top.
-      if (view && view.scrollY > view.innerHeight / 2) {
+      const scroller = this.scroller?.isConnected ? this.scroller : null;
+      if (view && scrolledDown(scroller, view) > view.innerHeight / 2) {
         if (!this.focusFirstOnScreen(false) && (dir === 'up' || dir === 'down')) {
-          view.scrollBy({ top: (dir === 'down' ? 0.8 : -0.8) * view.innerHeight, behavior: 'instant' });
+          scrollPage(scroller, view, { top: (dir === 'down' ? 0.8 : -0.8) * view.innerHeight, behavior: 'instant' }, true);
         }
         return true;
       }
@@ -429,7 +459,7 @@ export class SpatialNavigator {
       const r = target.getBoundingClientRect();
       const far = dir === 'down' ? r.top > view.innerHeight : r.bottom < 0;
       if (far) {
-        view.scrollBy({ top: (dir === 'down' ? 0.8 : -0.8) * view.innerHeight, behavior: 'instant' });
+        scrollPage(pageScroller(from, view), view, { top: (dir === 'down' ? 0.8 : -0.8) * view.innerHeight, behavior: 'instant' }, true);
         return true;
       }
     }
@@ -494,11 +524,14 @@ export class SpatialNavigator {
     // Anything on the first screenful (the bar and the banner under it) is
     // shown with the page at the very top, so the banner is seen whole and
     // not half under the bar. Further down, the focused row is centred.
-    const top = view ? el.getBoundingClientRect().top + view.scrollY : Infinity;
-    const bottom = view ? top + el.getBoundingClientRect().height : Infinity;
+    const scroller = view ? pageScroller(el, view) : null;
+    if (view) this.scroller = scroller;
+    const r = el.getBoundingClientRect();
+    const top = !view ? Infinity : scroller ? r.top - scroller.getBoundingClientRect().top + scroller.scrollTop : r.top + view.scrollY;
+    const bottom = top + r.height;
     if (view && bottom <= view.innerHeight) {
       // Only this: a second scroll request would replace it and stop short of the top.
-      view.scrollTo({ top: 0, behavior: this.rapid ? 'instant' : 'smooth' });
+      scrollPage(scroller, view, { top: 0, behavior: this.rapid ? 'instant' : 'smooth' });
     } else {
       // With a key held, a smooth scroll is restarted by every repeat and never arrives.
       el.scrollIntoView({ block: 'center', inline: 'center', behavior: this.rapid ? 'instant' : 'smooth' });

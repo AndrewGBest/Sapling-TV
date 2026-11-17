@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { coveredByScreen, edgeControl, FOCUS_ATTR, openDialog, SpatialNavigator, ZOOM_ATTR } from '../src/layer/spatial/navigator';
+import { coveredByScreen, edgeControl, FOCUS_ATTR, openDialog, pageScroller, SpatialNavigator, ZOOM_ATTR } from '../src/layer/spatial/navigator';
 
 // jsdom has no layout engine, so each element's rectangle is read from data-rect="left,top,width,height".
 function installLayout(): void {
@@ -289,6 +289,38 @@ describe('scrolling to the focused control', () => {
     nav.focus(document.getElementById('inBanner'));
     nav.focus(document.getElementById('lower'));
     expect(calls).toEqual(['top:0', 'lower:center']);
+  });
+
+  // Seen on the live site: the window never scrolls; a screen-sized box inside it does.
+  it('measures the first screenful in the box that scrolls the page when the window does not', () => {
+    Object.defineProperty(window, 'innerHeight', { value: 540, configurable: true });
+    Object.defineProperty(window, 'scrollY', { value: 0, configurable: true });
+    document.body.innerHTML = `<div id="page" style="overflow-y: auto" data-rect="0,0,960,540">
+      ${card('play', 40, -294)}${card('row', 40, 900)}</div>`;
+    const page = document.getElementById('page')!;
+    Object.defineProperty(page, 'clientHeight', { value: 540, configurable: true });
+    Object.defineProperty(page, 'scrollHeight', { value: 4900, configurable: true });
+    page.scrollTop = 774;
+    const calls: string[] = [];
+    window.scrollTo = (() => calls.push('window')) as typeof window.scrollTo;
+    page.scrollTo = ((opts: ScrollToOptions) => calls.push(`page top:${opts.top}`)) as typeof page.scrollTo;
+    Element.prototype.scrollIntoView = function (this: Element, opts?: ScrollIntoViewOptions | boolean): void {
+      calls.push(`${this.id}:${typeof opts === 'object' ? opts.block : ''}`);
+    };
+    expect(pageScroller(document.getElementById('play'), window)).toBe(page);
+    const nav = new SpatialNavigator(document);
+    // 294 above the screen with the box scrolled 774 down: 480 from the page's top, on its first screenful.
+    nav.focus(document.getElementById('play'));
+    nav.focus(document.getElementById('row'));
+    expect(calls).toEqual(['page top:0', 'row:center']);
+  });
+
+  it('takes the window as the scroller when no screen-sized box scrolls', () => {
+    document.body.innerHTML = `<div id="list" style="overflow-y: auto" data-rect="0,0,300,100">${card('a', 0, 0)}</div>`;
+    const list = document.getElementById('list')!;
+    Object.defineProperty(list, 'clientHeight', { value: 100, configurable: true });
+    Object.defineProperty(list, 'scrollHeight', { value: 900, configurable: true });
+    expect(pageScroller(document.getElementById('a'), window)).toBeNull();
   });
 });
 
