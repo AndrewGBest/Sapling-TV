@@ -76,6 +76,20 @@ an outline in `test/fixtures/outlines/` and checked by
 | Marks that must not appear in package names | `scripts/check-rules.mjs` |
 | Selectors | `adapters/appletv.json` |
 
+## Frames
+
+The preload runs in every frame (`nodeIntegrationInSubFrames`; no Node
+integration is involved), and each frame has its own layer in its own
+isolated world. Keys go to whichever frame has keyboard focus.
+
+| Hand-over | How |
+|---|---|
+| Page to frame | A frame at least 120x60 is a focus target; focusing it gives its window the keys, and its layer focuses a text field or the first control |
+| Frame to parent, at an edge | `frameEdge` message; the shell passes it to the parent frame, whose layer moves on from the frame's box |
+| Frame to parent, Back | First Back sends the site Escape; a second within four seconds sends `leaveFrame`, and the parent does its own Back |
+| A frame that shows nothing | Every key is handed to the parent |
+| Game controller | Read by the page; while a frame has the keys, each action goes page to shell to focused frame (`relay`), rebuilt by `sanitizeAction` |
+
 ## Page scrolling
 
 Some sites keep the window still and scroll a screen-sized box inside it
@@ -123,6 +137,5 @@ builds advertise Dolby audio that Linux cannot decode; see `DECISIONS.md`,
 
 ## Not built yet
 
-Frame support (the layer stops at frame boundaries; see `DESIGN.md` section
-5), player support for controls inside shadow roots, CEC helper, adapter
+Player support for controls inside shadow roots, CEC helper, adapter
 auto-update. See `ROADMAP.md`.

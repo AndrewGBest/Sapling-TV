@@ -73,6 +73,10 @@ section), and the player's controls inside shadow roots.
 
 ## 5. Frames: the design for sign-in and pop-ups in frames
 
+**Superseded the same day:** what was built is one layer per frame, which
+covers same-origin and cross-origin frames alike. See `DECISIONS.md`,
+"The layer runs in every frame". The first plan is kept below for the record.
+
 The layer runs in the top frame's isolated world and hears keys only while
 keyboard focus is in the top document. When the site moves focus into a frame
 (sign-in does), the remote goes dead: arrows and Back do nothing, only the

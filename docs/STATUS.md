@@ -2,6 +2,61 @@
 
 Update this at the end of every working session. Newest first.
 
+## 2026-11-17: session 1, later: frames, first focus, keyboard placement
+
+### Changed
+
+- The layer runs in every frame; sign-in is usable from the remote
+  (`DECISIONS.md`). New end-to-end launch with a made-up form in frames.
+- A key the layer takes on the way down is taken on the way up.
+- First focus on a title page is the play button (adapter revision 3).
+- The on-screen keyboard keeps clear of the field being typed in.
+
+### Verified, and how
+
+| Claim | Evidence |
+|---|---|
+| Checks pass | `npm run check` (202 unit tests) and `npm run e2e` |
+| Sign-in form from the remote, first step | Live, signed-out scratch profile, `--automation`: Enter on Sign In; a key brought the keyboard up on the email field; one letter typed and deleted through it; Down and Up reached the link, Continue and Close; Back with the keyboard up left the form open; Back closed it and focus returned to Sign In |
+| The form the site opens by itself (pressing play when the session has lapsed) gets the keyboard without a key press | Live, once: keyboard up on the email field |
+| Purchase guard, typing and Back inside frames | End-to-end fixture, including a zero-height frame from another origin holding the keys |
+| First key on a title page lands on the play button | Live, signed in |
+
+### Not verified
+
+- **The password and verification-code steps**, which are in the account
+  host's frame once it is shown. An agent never types an account's email, so
+  only Andrew can get there. The fixture's other-origin frame is same-site;
+  a frame in another process was not exercised.
+- Game-controller relay into frames: unit-tested action rebuilding only.
+- Keyboard placement on the live form: unit-tested, not seen.
+- The profile picker: it did not appear again.
+- The player from the remote: not reached (next item).
+
+### Found, not fixed
+
+1. **The signed-in session lapsed for playback.** Pressing play now opens the
+   sign-in form, and the header shows a generic account icon. Likely cause,
+   not confirmed: the profile was created by Electron 44 and then opened by
+   Electron 42 (older Chromium), or the scratch copy used for the 42 test.
+   Andrew needs to sign in again before the player can be worked on.
+2. **Intermittent stall of the sign-in prompt** (spinner, blank account
+   frame): see the open risk in `DECISIONS.md`.
+3. The site was flaky during these runs: its account service returned
+   errors, and a click or Enter on play or Sign In sometimes opened nothing,
+   on builds with and without the frame change.
+4. Signed out, a sticky subscribe banner can sit over the top bar; Sign In
+   was then not reachable with arrows (seen once, not investigated).
+5. In a text field with the keyboard put away, Left and Right move the caret,
+   so the control beside a search field is reached only after a second Back.
+
+### Next actions
+
+1. Andrew: sign in again (and, if willing, try it with only arrows, Enter and
+   Back; the password step is the untested part).
+2. Player from the remote: play/pause, seek, the site's controls, Back.
+3. The profile picker when it next appears.
+
 ## 2026-11-17: session 1 (Debian 13 VM, KDE on X11, Canada)
 
 The repository was created from Tropic Video 0.1.1 and pointed at the Apple
@@ -57,7 +112,7 @@ TV website. Andrew signed in by hand in the app's window part-way through.
 
 ### Found, not fixed
 
-1. **Sign-in traps the remote.** The form is in a same-origin frame inside a
+1. (Fixed later the same day, first step verified; see above.) **Sign-in traps the remote.** The form is in a same-origin frame inside a
    modal dialog (with a further frame from the account host). Once focus is
    in the frame the layer hears no keys: arrows and Back do nothing; Ctrl+Q
    still quits. Design in `DESIGN.md` section 5.

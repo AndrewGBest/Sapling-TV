@@ -130,3 +130,48 @@ was not discussed, as with Tropic Video.
 **Note:** the licence covers the code, not the name. The README asks forks to
 use a different name.
 **Reopen if:** Andrew wants "or later", or a contributor needs a different licence.
+
+## 2026-11-17: The layer runs in every frame (`nodeIntegrationInSubFrames`)
+
+**Decision:** the sandboxed preload is loaded into every frame of the page,
+and each frame gets its own layer instance. Frames hand the keys to each
+other: a frame is a focus target in its parent; at an edge a frame offers the
+move to its parent; Back in a frame sends Escape, and a second Back hands the
+keys to the parent; a frame that shows nothing hands every key to its parent.
+Game-controller presses are read by the page and relayed to the focused
+frame through the shell.
+**Reason:** the site's sign-in form (and its purchase flows) live in frames:
+a same-origin frame in a pop-up, holding a frame from the account host that
+is given the keys while it has no height. With the layer only in the page,
+the remote went dead when the form opened. Running a layer inside each frame
+gives every frame, including the cross-origin one, the same ring, keyboard
+and purchase guard, with no access from one origin's page to another's.
+**Hard rule 12:** despite its name the Electron option enables no Node
+integration. Frames get the same sandboxed, context-isolated preload as the
+page and nothing is exposed to their scripts. The shell now accepts messages
+from frames of its own window; pointer, sleep and relay requests only from
+the page, hand-back requests only from frames; relayed actions are rebuilt
+from known fields (`sanitizeAction`).
+**The design note this replaces:** `DESIGN.md` section 5 proposed a second
+layer started by the top layer for same-origin frames, and Tab emulation for
+cross-origin ones. One layer per frame is simpler and covers both.
+**Open risk:** on 2026-11-17 the sign-in prompt stalled on a spinner three
+times in a row (the account frame stayed blank) with this change in place.
+It loaded in every run without the change (5) and in later runs with it (4
+of 4 that opened a prompt). The site was also returning errors from its
+account service in that period. Cause not established.
+**Reopen if:** the stall is pinned on the layer; then start layers in frames
+only once they are loaded and shown, or go back to the top-layer design.
+
+## 2026-11-17: Adapter revision 3: first focus on a title page is the play button
+
+**Decision:** new adapter key `initialFocus`. When nothing has focus and the
+page shows a control it names, focus starts there. Evidence:
+`test/fixtures/outlines/title-buttons.txt`.
+**Reason:** on a title page Down from the description skipped the play
+button, which sits below and to the left, for the episode row in the same
+column. Changing the geometry rule (never jump over a nearer row) was tried
+and dropped: it contradicts a tested rule and would stop on shelf titles
+from some columns but not others.
+**Reopen if:** signed out, the same selector matches the subscription button
+and starting there is unwelcome.

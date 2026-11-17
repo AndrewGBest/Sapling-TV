@@ -20,7 +20,7 @@ until it is seen working on this one.
 - [x] Shelves turn from the remote
 - [x] Focus scrolls into view on pages that scroll an inner box
 - [ ] Remote coverage walk, signed in: home, a title page, search, a film, a channel, settings menus
-- [ ] The play button: not under the country banner; reached by Down from the description
+- [x] The play button is where focus starts on a title page (still under the country banner when the storefront differs)
 - [ ] Profile picker from the remote (choosing a profile is Andrew's to try)
 - [ ] TV scaling tuned on a real 1080p TV
 
@@ -28,8 +28,7 @@ until it is seen working on this one.
 
 ## Phase 2: frames, player and text entry
 
-- [ ] Same-origin frames: a second layer instance follows focus into them
-- [ ] Cross-origin frames: arrows become Tab, Back always gets out
+- [x] Frames: a layer in every frame; keys handed between frames; Back always gets out (first sign-in step verified live)
 - [ ] Sign in with only a remote (Andrew)
 - [ ] Player: find the playing video and the site's controls (custom elements with shadow roots)
 - [ ] Play/pause and seek keys on this site's player
