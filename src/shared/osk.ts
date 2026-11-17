@@ -146,3 +146,18 @@ export function isSecretField(type: string | null, autocomplete: string | null):
   if ((type ?? '').toLowerCase() === 'password') return true;
   return /password|one-time-code/i.test(autocomplete ?? '');
 }
+
+/** The share of the screen's height the keyboard takes, with its margin (see the overlay's styles). */
+export const OSK_SHARE = 0.52;
+
+/**
+ * Where to put the keyboard for a field at this place on screen: at the
+ * bottom when the field is clear of it, at the top when the field is in the
+ * lower part, and 'scroll' when the field is in the middle, where either
+ * place would cover it and the page should bring the field up first.
+ */
+export function oskPlacement(fieldTop: number, fieldBottom: number, viewHeight: number): 'bottom' | 'top' | 'scroll' {
+  if (fieldBottom <= viewHeight * (1 - OSK_SHARE)) return 'bottom';
+  if (fieldTop >= viewHeight * OSK_SHARE) return 'top';
+  return 'scroll';
+}

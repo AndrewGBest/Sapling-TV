@@ -566,6 +566,23 @@ describe('coveredByScreen', () => {
   });
 });
 
+describe('first focus on a page', () => {
+  it('goes to the control the adapter names, when it is on screen; otherwise top-left as before', () => {
+    Object.defineProperty(window, 'innerHeight', { value: 540, configurable: true });
+    Object.defineProperty(window, 'innerWidth', { value: 960, configurable: true });
+    document.body.innerHTML = card('bar', 0, 0) + card('play', 40, 400) + card('below', 40, 900);
+    let nav = new SpatialNavigator(document, { initial: () => document.getElementById('play') });
+    nav.move('down');
+    expect(nav.focused?.id).toBe('play');
+    nav = new SpatialNavigator(document, { initial: () => document.getElementById('below') });
+    nav.move('down');
+    expect(nav.focused?.id).toBe('bar');
+    nav = new SpatialNavigator(document, { initial: () => null });
+    nav.move('down');
+    expect(nav.focused?.id).toBe('bar');
+  });
+});
+
 describe('frames', () => {
   // Seen on the live site: sign-in is a pop-up whose whole content is a frame.
   it('a frame big enough to hold controls is a focus target; a small or hidden one is not', () => {

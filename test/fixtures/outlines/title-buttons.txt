@@ -1,0 +1,16 @@
+# Live site, signed in, a show's title page in the Canadian storefront, 2026-11-17. The banner's description and buttons, trimmed.
+div.container
+  p.content.title-3.with-more-button[data-testid="truncate-text"]{text:128}
+  button.more[data-testid="truncate-more-button"][type="button"]{text:4}
+  div.buttons-container
+    div.buttons
+      div.button-wrapper
+        div
+          button.theme-primary[data-testid="capsule-button"]
+            span.ResourceImagePlayGlyph
+            div.progress-bar
+            span.label{text:3}
+      div.button-wrapper
+        div
+          button.theme-secondary.circle[data-testid="capsule-button"]
+            span.label.hidden{text:5}

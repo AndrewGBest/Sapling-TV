@@ -69,6 +69,8 @@ export interface NavigatorOptions {
   onFocusChange?: (el: Element | null) => void;
   /** Controls that are never focus targets (carousel arrows the layer presses itself at a row's edge). */
   skip?: string[];
+  /** The control focus should start on when nothing is focused, if the page has one. */
+  initial?: () => Element | null;
   /** When it returns an element, only candidates inside that element are considered. */
   scope?: () => Element | null;
 }
@@ -437,6 +439,11 @@ export class SpatialNavigator {
           scrollPage(scroller, view, { top: (dir === 'down' ? 0.8 : -0.8) * view.innerHeight, behavior: 'instant' }, true);
         }
         return true;
+      }
+      const start = this.opts.initial?.() ?? null;
+      if (start && view && all.includes(start)) {
+        const r = start.getBoundingClientRect();
+        if (r.top >= 0 && r.bottom <= view.innerHeight && r.left >= 0 && r.right <= view.innerWidth) return this.focus(start);
       }
       const i = pickInitial(all.map(toRect));
       return this.focus(all[i] ?? null);

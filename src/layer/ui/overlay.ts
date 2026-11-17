@@ -51,6 +51,7 @@ const CSS = `
   box-shadow: 0 1vh 6vh rgba(0,0,0,.7);
 }
 .osk.show { display: grid; }
+.osk.top { bottom: auto; top: 4vh; }
 .osk .key {
   height: 7.2vh; border-radius: 1.2vh; background: #2a2f38; color: #f2f2f2;
   font: 600 3.6vh/7.2vh system-ui, sans-serif; text-align: center;
@@ -173,7 +174,7 @@ export class Overlay {
   }
 
   /** Draws the on-screen keyboard with one key highlighted; `null` hides it. */
-  keyboard(rows: readonly (readonly OskKey[])[] | null, active?: { row: number; index: number }, submitLabel?: string): void {
+  keyboard(rows: readonly (readonly OskKey[])[] | null, active?: { row: number; index: number }, submitLabel?: string, atTop = false): void {
     if (!rows) {
       this.oskEl.classList.remove('show');
       return;
@@ -188,6 +189,7 @@ export class Overlay {
         keys.push(el);
       }),
     );
+    this.oskEl.classList.toggle('top', atTop);
     this.oskEl.replaceChildren(...keys);
     this.oskEl.classList.add('show');
   }

@@ -8,7 +8,7 @@ import { installPurchaseGuard } from './guard/purchase-guard';
 import { startPolling } from './input/gamepad';
 import { keyToAction, type Mode } from './input/keys';
 import { aboutTitle, HELP, NOTICE } from '../shared/about';
-import { isSecretField, OskModel } from '../shared/osk';
+import { isSecretField, oskPlacement, OskModel } from '../shared/osk';
 import { InjectedKeys, isNativePlayerKey, playerKeyFor, playerKeyInfo, type PlayerKey } from '../shared/player-keys';
 import { findMainVideo, isPlayerActive, playerScope } from './player';
 import { coveredByScreen, edgeControl, isFrameTarget, isVisible, openDialog, rowOf, SpatialNavigator } from './spatial/navigator';
@@ -92,6 +92,7 @@ export function startLayer({ doc, options, adapter, send }: LayerDeps): Layer {
       openOsk(el);
     },
     scope,
+    initial: () => (inPlayer() || openDialog(doc) ? null : firstMatch(doc, adapter.selectors.initialFocus)),
     skip: [...adapter.selectors.rowPrev, ...adapter.selectors.rowNext, ...adapter.selectors.notFocusable],
   });
 
@@ -217,7 +218,8 @@ export function startLayer({ doc, options, adapter, send }: LayerDeps): Layer {
   let oskOpen = false;
   let aboutOpen = false;
   let oskSubmit = 'enter';
-  const drawOsk = (): void => overlay.keyboard(oskOpen ? osk.rows : null, { row: osk.row, index: osk.index }, oskSubmit);
+  let oskAtTop = false;
+  const drawOsk = (): void => overlay.keyboard(oskOpen ? osk.rows : null, { row: osk.row, index: osk.index }, oskSubmit, oskAtTop);
   const isSearchField = (el: Element): boolean => {
     try {
       return el.matches([...adapter.selectors.searchInput, ...GENERIC_SEARCH].join(','));
@@ -229,6 +231,23 @@ export function startLayer({ doc, options, adapter, send }: LayerDeps): Layer {
     if (!oskOpen) osk.reset();
     // The key says what it does: it only searches in a search field.
     oskSubmit = isSearchField(field) ? 'search' : 'enter';
+    // The keyboard must not cover what is being typed. A field in the middle
+    // of the screen is brought to the top first; if the page cannot scroll
+    // that far, the keyboard takes whichever side the field is not on.
+    const place = (): 'bottom' | 'top' | 'scroll' => {
+      const r = field.getBoundingClientRect();
+      return oskPlacement(r.top, r.bottom, view.innerHeight);
+    };
+    let where = place();
+    if (where === 'scroll') {
+      field.scrollIntoView({ block: 'start', behavior: 'instant' });
+      where = place();
+      if (where === 'scroll') {
+        const r = field.getBoundingClientRect();
+        where = (r.top + r.bottom) / 2 > view.innerHeight / 2 ? 'top' : 'bottom';
+      }
+    }
+    oskAtTop = where === 'top';
     oskOpen = true;
     drawOsk();
   };

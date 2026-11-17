@@ -17,6 +17,8 @@ export interface SiteAdapter {
     rowNext: string[];
     /** Controls the pointer can use but focus never lands on (a card's small menu button, whose actions are on the title page too). */
     notFocusable: string[];
+    /** Where focus starts on a page that has one of these on screen (a title page's play button), instead of the top-left control. */
+    initialFocus: string[];
     /** Elements the site's player lives in; see findMainVideo. */
     playerRoot: string[];
     playerClose: string[];
@@ -24,7 +26,7 @@ export interface SiteAdapter {
   };
 }
 
-const KEYS = ['extraFocusable', 'searchInput', 'searchOpen', 'rowPrev', 'rowNext', 'notFocusable', 'playerRoot', 'playerClose', 'purchaseControls'] as const;
+const KEYS = ['extraFocusable', 'searchInput', 'searchOpen', 'rowPrev', 'rowNext', 'notFocusable', 'initialFocus', 'playerRoot', 'playerClose', 'purchaseControls'] as const;
 
 export function emptyAdapter(): SiteAdapter {
   return {
@@ -32,7 +34,7 @@ export function emptyAdapter(): SiteAdapter {
     schema: 1,
     revision: 0,
     verified: false,
-    selectors: { extraFocusable: [], searchInput: [], searchOpen: [], rowPrev: [], rowNext: [], notFocusable: [], playerRoot: [], playerClose: [], purchaseControls: [] },
+    selectors: { extraFocusable: [], searchInput: [], searchOpen: [], rowPrev: [], rowNext: [], notFocusable: [], initialFocus: [], playerRoot: [], playerClose: [], purchaseControls: [] },
   };
 }
 

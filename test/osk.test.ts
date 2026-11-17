@@ -128,3 +128,19 @@ describe('isSecretField', () => {
     expect(isSecretField('email', 'username')).toBe(false);
   });
 });
+
+describe('where the keyboard goes, so it never covers the field being typed in', () => {
+  it('stays at the bottom when the field is above it', async () => {
+    const { oskPlacement } = await import('../src/shared/osk');
+    expect(oskPlacement(40, 90, 540)).toBe('bottom');
+  });
+  it('goes to the top when the field is in the lower half', async () => {
+    const { oskPlacement } = await import('../src/shared/osk');
+    expect(oskPlacement(400, 450, 540)).toBe('top');
+  });
+  it('asks for the field to be scrolled up when it sits in the middle, where either place would cover it', async () => {
+    const { oskPlacement } = await import('../src/shared/osk');
+    // Seen on the live site: the sign-in form's email field, 236 to 290 of 541.
+    expect(oskPlacement(236, 290, 541)).toBe('scroll');
+  });
+});

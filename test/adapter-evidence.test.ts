@@ -93,6 +93,14 @@ describe('the adapter is backed by outlines', () => {
     expect(card.querySelector('a[data-testid="lockup"]')!.matches(adapter.selectors.notFocusable.join(','))).toBe(false);
   });
 
+  it('first focus: the title page has one primary button, the one that plays, and it is not the small "more" button', () => {
+    const dom = fromOutline('title-buttons.txt');
+    const first = dom.querySelectorAll(adapter.selectors.initialFocus[0]!);
+    expect(first).toHaveLength(1);
+    expect(first[0]!.querySelector('[class*="PlayGlyph"]')).not.toBeNull();
+    expect(first[0]!.matches('[data-testid="truncate-more-button"]')).toBe(false);
+  });
+
   it('rebuilds an outline into elements the selectors can be checked against', () => {
     const dom = fromOutlineText(
       ['div[data-testid="row"]', '  ul', '    li', '      a.card[href:12]{text:5}', '  button[aria-label:4]'].join('\n'),
