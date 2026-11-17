@@ -44,6 +44,12 @@ describe('describeBlockedUrl', () => {
     );
   });
 
+  it('names the scheme when it is not https, so a link into a native app is recognisable', () => {
+    expect(describeBlockedUrl('videos://tv.apple.com/show/x?token=SECRET')).toBe('videos://tv.apple.com/show/x');
+    expect(describeBlockedUrl('http://example.com/a')).toBe('http://example.com/a');
+    expect(describeBlockedUrl('https://example.com/a')).toBe('example.com/a');
+  });
+
   it('truncates long paths', () => {
     const out = describeBlockedUrl(`https://example.com/${'a'.repeat(300)}`);
     expect(out.length).toBeLessThanOrEqual(81);

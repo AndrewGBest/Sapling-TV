@@ -24,7 +24,11 @@ export function describeBlockedUrl(url: string): string {
     return '(unreadable address)';
   }
   if (!u.host) return `(${u.protocol} address)`;
-  const text = u.host + u.pathname;
+  // The scheme is named unless it is the usual one: the service's pages link
+  // into its native apps with their own schemes, and those look like the
+  // service's own address otherwise.
+  const scheme = u.protocol === 'https:' ? '' : `${u.protocol}//`;
+  const text = scheme + u.host + u.pathname;
   return text.length > MAX_DESCRIPTION ? `${text.slice(0, MAX_DESCRIPTION)}…` : text;
 }
 
