@@ -49,8 +49,8 @@ until it is seen working on this one.
 
 ## Phase 4: packaging and release
 
-- [ ] Repository on GitHub; CI green
-- [ ] AppImage, tarball and Flatpak bundle built in CI and launched once
+- [x] Repository on GitHub; CI green
+- [ ] AppImage, tarball and Flatpak bundle built in CI (done) and launched once (not yet)
 - [ ] First pre-release
 - [x] Original icon
 - [ ] Lawyer review of `LEGAL-GUARDRAILS.md` before promoting the project

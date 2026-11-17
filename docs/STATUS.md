@@ -22,6 +22,7 @@ TV website. Andrew signed in by hand in the app's window part-way through.
 - The log names a refused address's scheme when it is not https.
 - castLabs Electron pinned to 42.11.18 (see `DECISIONS.md`).
 - New icon. Documentation rewritten for this service.
+- On GitHub at AndrewGBest/Sapling-TV, on top of Andrew's initial commit; licence AGPL-3.0 (his choice).
 
 ### Verified, and how
 
@@ -38,14 +39,16 @@ TV website. Andrew signed in by hand in the app's window part-way through.
 | A refused native-app link is logged with its scheme | Unit and e2e tests; live: "Open TV" refused |
 | Focus scrolls into view on pages that scroll an inner box | Live, signed in: Up from the episode list to the play button brought the page to the top with the button visible |
 | The icon renders | Rendered with Chromium and looked at |
+| CI on GitHub | Run 44129311355: check and e2e green on the first push |
+| Packages build in CI on Electron 42 | "Build packages" run 44129545519 green; artifact `sapling-tv-linux-x64` (AppImage, tarball, Flatpak). Not downloaded or launched |
 
 ### Not verified
 
 - The picture and sound by eye or ear. The spike sees element state only.
 - Any title other than one episode; films; live sports; any other storefront.
 - Bare metal, a real TV, a physical remote or game controller.
-- Packaging (AppImage, tarball, Flatpak) and the CI workflows: nothing has
-  been built or pushed yet.
+- The packaged builds: built in CI but not downloaded or launched. The
+  release workflow has not run (no tag yet).
 - Sleep inhibition, MPRIS, leaving-the-app pause: carried over from Tropic
   Video, not tried here.
 - The player from the remote: its controls are custom elements with shadow
@@ -82,4 +85,4 @@ TV website. Andrew signed in by hand in the app's window part-way through.
 3. The play button: items 3 and 4.
 4. Andrew: decide on Electron 42 versus a current release with the shell
    narrowing the Dolby claims (`DECISIONS.md`).
-5. Build the packages in CI once the repository is on GitHub.
+5. Download the CI-built AppImage and Flatpak and launch them once.
