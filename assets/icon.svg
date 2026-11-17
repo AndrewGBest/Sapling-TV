@@ -1,22 +1,26 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <!-- Sapling TV icon. Original artwork for this project: a sun setting behind a
-       leaf that doubles as a play mark. Not derived from any service's branding. -->
+  <!-- Sapling TV icon. Original artwork for this project: a seedling whose
+       right leaf carries a play mark, on a green dawn tile. Deliberately no
+       fruit and no round shapes that could read as one, and nothing taken
+       from any service's branding (CLAUDE.md, Hard rules 1 and 5). -->
   <defs>
     <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#2b1a4a"/>
-      <stop offset="0.6" stop-color="#b8405e"/>
-      <stop offset="1" stop-color="#f2a65a"/>
+      <stop offset="0" stop-color="#0d2b27"/>
+      <stop offset="0.62" stop-color="#1d6450"/>
+      <stop offset="1" stop-color="#7cc26a"/>
+    </linearGradient>
+    <linearGradient id="leaf" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0" stop-color="#b6ee7a"/>
+      <stop offset="1" stop-color="#f2ffd9"/>
     </linearGradient>
     <clipPath id="tile"><rect width="512" height="512" rx="112"/></clipPath>
   </defs>
   <g clip-path="url(#tile)">
     <rect width="512" height="512" fill="url(#sky)"/>
-    <circle cx="256" cy="330" r="150" fill="#ffd27d"/>
-    <rect y="392" width="512" height="120" fill="#12303a"/>
-    <!-- leaf: a rounded play triangle with a midrib and veins -->
-    <path d="M186 128 C186 104 210 92 230 104 L392 228 C410 242 410 270 392 284 L230 408 C210 420 186 408 186 384 Z" fill="#0f5c4d"/>
-    <path d="M196 256 H392" stroke="#7fd1a8" stroke-width="12" stroke-linecap="round"/>
-    <path d="M236 256 L210 176 M286 256 L262 190 M336 256 L318 214 M236 256 L210 336 M286 256 L262 322 M336 256 L318 298"
-          stroke="#7fd1a8" stroke-width="9" stroke-linecap="round" fill="none"/>
+    <path d="M0 452 C 120 418, 392 418, 512 452 L 512 512 L 0 512 Z" fill="#0a221e"/>
+    <path d="M256 446 C 250 384, 264 330, 256 262" stroke="#f2ffd9" stroke-width="18" stroke-linecap="round" fill="none"/>
+    <path d="M252 292 C 196 306, 118 272, 98 172 C 184 164, 244 214, 252 292 Z" fill="url(#leaf)"/>
+    <path d="M259 266 C 286 188, 358 116, 438 122 C 434 220, 352 284, 259 266 Z" fill="url(#leaf)"/>
+    <path d="M326 168 L 380 199 L 326 230 Z" fill="#1d6450"/>
   </g>
 </svg>
