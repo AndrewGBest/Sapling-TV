@@ -27,6 +27,10 @@ describe('purchase guard', () => {
     '<button id="t">Try It Free</button>',
     '<a id="t" href="/x">Accept Offer</a>',
     '<button id="t">Get Apple TV</button>',
+    // Seen on the live site's signed-out pages, 2026-11-17 (wording only).
+    '<button id="t">Bundle and Save</button>',
+    '<button id="t">View Plans</button>',
+    '<button id="t">Accept Free Trial</button>',
     '<button id="t">Upgrade to the plan without ads</button>',
     '<input id="t" type="submit" value="Place your order">',
     '<form action="/checkout/confirm"><button id="t">Continue</button></form>',
@@ -44,6 +48,8 @@ describe('purchase guard', () => {
     '<button id="t">Play Trailer</button>',
     '<button id="t">Up Next</button>',
     '<a id="t" href="/x">Sign In</a>',
+    '<a id="t" href="/x">Plan your evening</a>',
+    '<a id="t" href="/x">Open TV</a>',
   ])('allows %s', (markup) => {
     html(markup);
     expect(isSpendControl(document.getElementById('t')!)).toBe(false);
