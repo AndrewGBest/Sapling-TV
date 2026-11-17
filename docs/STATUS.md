@@ -22,7 +22,7 @@ TV website. Andrew signed in by hand in the app's window part-way through.
 - The log names a refused address's scheme when it is not https.
 - castLabs Electron pinned to 42.11.18 (see `DECISIONS.md`).
 - New icon. Documentation rewritten for this service.
-- On GitHub at AndrewGBest/Sapling-TV, on top of Andrew's initial commit; licence AGPL-3.0 (his choice).
+- On GitHub at AndrewGBest/Sapling-TV, on top of Andrew's initial commit; licence GPL-3.0, as for Tropic Video.
 
 ### Verified, and how
 

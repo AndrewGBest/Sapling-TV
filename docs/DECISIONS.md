@@ -119,14 +119,14 @@ updating the 42 line, or Andrew chooses the alternative.
 **Not checked:** the picture by eye (it was not looked at during playback);
 sound; any other title; bare metal.
 
-## 2026-11-17: Licence is AGPL-3.0
+## 2026-11-17: Licence is GPL-3.0, as for Tropic Video
 
-**Decision (Andrew):** the GitHub repository was created with the GNU Affero
-General Public License v3 as its first commit. Sapling TV uses it; Tropic
-Video's GPL-3.0 file was not carried over. `package.json` says
-`AGPL-3.0-only`; whether to allow "or any later version" was not discussed,
-as with Tropic Video.
-**Reason recorded:** the agent read the repository's licence file; Andrew's
-reason was not given. AGPL adds to GPL the duty to offer source to people who
-use a modified version over a network.
-**Reopen if:** Andrew meant GPL-3.0 for consistency with Tropic Video.
+**Decision (Andrew):** GPL-3.0, so that anyone distributing a modified
+version must publish their source under the same terms. The repository was
+first created with an AGPL-3.0 file by mistake; Andrew asked for GPL-3.0 and
+the file was replaced with the same GPL-3.0 text Tropic Video uses.
+`package.json` says `GPL-3.0-only`; whether to allow "or any later version"
+was not discussed, as with Tropic Video.
+**Note:** the licence covers the code, not the name. The README asks forks to
+use a different name.
+**Reopen if:** Andrew wants "or later", or a contributor needs a different licence.
