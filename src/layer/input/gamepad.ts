@@ -134,18 +134,13 @@ export function startPolling(
 ): () => void {
   const trackers = new Map<number, RepeatTracker>();
   let stopped = false;
-  let focused = true;
-  const onFocus = (): void => { focused = true; };
-  const onBlur = (): void => {
-    focused = false;
-    trackers.forEach((t) => t.reset());
-  };
-  view.addEventListener('focus', onFocus);
-  view.addEventListener('blur', onBlur);
-
   const tick = (): void => {
     if (stopped) return;
-    if (focused) {
+    // True while this page or a frame inside it has the keys; false when the
+    // window is not the one in front.
+    if (!view.document.hasFocus()) {
+      trackers.forEach((t) => t.reset());
+    } else {
       const pads = [...view.navigator.getGamepads()].filter((p): p is Gamepad => !!p && p.connected);
       const steam = pads.find((p) => STEAM_VIRTUAL_PAD.test(p.id));
       for (const pad of steam ? [steam] : pads) {
@@ -167,7 +162,5 @@ export function startPolling(
 
   return () => {
     stopped = true;
-    view.removeEventListener('focus', onFocus);
-    view.removeEventListener('blur', onBlur);
   };
 }

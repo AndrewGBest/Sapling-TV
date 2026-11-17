@@ -3,7 +3,7 @@ import { app, BrowserWindow, ipcMain, powerSaveBlocker, session } from 'electron
 import * as electron from 'electron';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import type { BridgeMessage, LayerOptions, SpikeEvent } from '../shared/actions';
+import { isDirection, sanitizeAction, type BridgeMessage, type LayerOptions, type SpikeEvent } from '../shared/actions';
 import { parseConfig, type UserConfig } from '../shared/config';
 import { typableText } from '../shared/osk';
 import { playerKeyInfo } from '../shared/player-keys';
@@ -79,6 +79,9 @@ function loadAdapter(): unknown {
   }
 }
 
+/** What every layer is started with; also given on request to a frame whose process did not get it. */
+let bootArg = '';
+
 function startUrl(): string {
   const override = value('url');
   if (override && options.dev && isAllowedUrl(override, { dev: true })) return override;
@@ -86,7 +89,7 @@ function startUrl(): string {
 }
 
 function createWindow(ready: Promise<void>): BrowserWindow {
-  const boot = encodeURIComponent(
+  bootArg = encodeURIComponent(
     JSON.stringify({ options: { ...options, version: app.getVersion(), keys: userConfig.keys, buttons: userConfig.buttons ?? {} }, adapter: loadAdapter() }),
   );
   const win = new BrowserWindow({
@@ -103,7 +106,11 @@ function createWindow(ready: Promise<void>): BrowserWindow {
       sandbox: true,
       nodeIntegration: false,
       webSecurity: true,
-      additionalArguments: [`--sapling-boot=${boot}`],
+      additionalArguments: [`--sapling-boot=${bootArg}`],
+      // The preload, still sandboxed and isolated, also runs in the page's
+      // frames, so the remote works inside them (the site's sign-in form is
+      // in one). This grants the frames nothing; see DECISIONS.md, 2026-11-17.
+      nodeIntegrationInSubFrames: true,
     },
   });
   win.removeMenu();
@@ -243,10 +250,34 @@ function createWindow(ready: Promise<void>): BrowserWindow {
 function wireMessages(): void {
   let blocker: number | undefined;
   let nudge = false;
+  ipcMain.on('sapling:boot', (event) => {
+    event.returnValue = bootArg;
+  });
   ipcMain.on('sapling:msg', (event, msg: BridgeMessage) => {
-    // Only the top frame of our own window may talk to the shell.
-    if (event.senderFrame !== event.sender.mainFrame) return;
+    // Only our own preload can send this (nothing is exposed to pages), from
+    // the page or from a frame inside it.
+    const frame = event.senderFrame;
+    const main = event.sender.mainFrame;
+    if (!frame || frame.top !== main) return;
+    const fromPage = frame === main;
+    // The pointer, sleep and frame-relay requests make sense from the page
+    // only; the frame hand-backs from a frame only.
+    const PAGE_ONLY = ['revealControls', 'hover', 'playback', 'relay'];
+    const FRAME_ONLY = ['frameEdge', 'leaveFrame'];
+    if (fromPage ? FRAME_ONLY.includes(msg.kind) : PAGE_ONLY.includes(msg.kind)) return;
     switch (msg.kind) {
+      case 'relay': {
+        const action = sanitizeAction(msg.action);
+        const target = event.sender.focusedFrame;
+        if (action && target && target !== main && target.top === main) target.send('sapling:action', action);
+        break;
+      }
+      case 'frameEdge':
+        if (isDirection(msg.dir)) frame.parent?.send('sapling:frameEdge', msg.dir);
+        break;
+      case 'leaveFrame':
+        frame.parent?.send('sapling:leaveFrame');
+        break;
       case 'exit':
         app.quit();
         break;

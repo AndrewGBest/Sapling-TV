@@ -91,3 +91,21 @@ describe('gamepad', () => {
     expect(t.update(new Set([Btn.A]), 32)).toEqual([Btn.A]);
   });
 });
+
+describe('sanitizeAction: an action relayed between frames is rebuilt, never passed through', () => {
+  it('accepts each kind of action and drops extra fields', async () => {
+    const { sanitizeAction } = await import('../src/shared/actions');
+    expect(sanitizeAction({ type: 'move', dir: 'left', extra: 1 })).toEqual({ type: 'move', dir: 'left' });
+    expect(sanitizeAction({ type: 'seek', seconds: -10 })).toEqual({ type: 'seek', seconds: -10 });
+    for (const type of ['select', 'back', 'playPause', 'search', 'settings', 'diagnostics', 'exit']) {
+      expect(sanitizeAction({ type, junk: 'x' })).toEqual({ type });
+    }
+  });
+
+  it('refuses anything else', async () => {
+    const { sanitizeAction } = await import('../src/shared/actions');
+    for (const bad of [null, 'move', {}, { type: 'move' }, { type: 'move', dir: 'north' }, { type: 'seek', seconds: 'x' }, { type: 'seek', seconds: Infinity }, { type: 'run' }]) {
+      expect(sanitizeAction(bad)).toBeNull();
+    }
+  });
+});

@@ -479,6 +479,111 @@ try {
   }
 }
 
+// Fifth launch: a made-up sign-in form in frames, shaped like the live site's:
+// a pop-up whose whole content is a same-origin frame, which holds a
+// zero-height frame from another origin that is given the keys.
+{
+  const INNER = '<!doctype html><title>inner</title><input id="hiddenfield">';
+  const FORM = (innerPort) => `<!doctype html><title>form</title>
+<style>body{margin:0;background:#222;color:#eee} button,input{position:absolute;font-size:20px}</style>
+<button id="x" aria-label="Close" style="left:20px;top:20px">X</button>
+<input id="email" type="text" autocomplete="email" style="left:200px;top:150px;width:300px">
+<iframe id="hidden" src="http://127.0.0.1:${innerPort}/" style="position:absolute;left:150px;top:140px;width:400px;height:0;border:0"></iframe>
+<button id="go" style="left:200px;top:300px">Continue</button>
+<button id="buy" style="left:400px;top:300px">Subscribe</button>
+<script>
+  const say = (log) => parent.postMessage({ log }, '*');
+  let given = false;
+  addEventListener('focus', () => { if (!given) { given = true; setTimeout(() => document.getElementById('hidden').focus(), 60); } });
+  addEventListener('keyup', (e) => { if (e.key === 'Escape') parent.postMessage('close', '*'); });
+  document.getElementById('go').onclick = () => say('continue');
+  document.getElementById('buy').onclick = () => say('bought');
+</script>`;
+  const HOST = `<!doctype html><title>host</title>
+<style>body{margin:0;background:#111;color:#eee} dialog{width:100vw;height:100vh;max-width:none;max-height:none;margin:0;padding:0;border:0}</style>
+<button id="open" style="margin:40px;font-size:20px">Sign in</button>
+<dialog id="dlg"><iframe id="form" src="/form" style="width:100%;height:100%;border:0"></iframe></dialog>
+<script>
+  window.log = [];
+  document.getElementById('open').onclick = () => document.getElementById('dlg').showModal();
+  addEventListener('message', (e) => { if (e.data === 'close') document.getElementById('dlg').close(); else if (e.data && e.data.log) log.push(e.data.log); });
+</script>`;
+  const inner = createServer((_req, res) => res.writeHead(200, { 'content-type': 'text/html' }).end(INNER));
+  await new Promise((r) => inner.listen(0, '127.0.0.1', r));
+  const host = createServer((req, res) =>
+    res.writeHead(200, { 'content-type': 'text/html' }).end(req.url === '/form' ? FORM(inner.address().port) : HOST),
+  );
+  await new Promise((r) => host.listen(0, '127.0.0.1', r));
+  const hostUrl = `http://localhost:${host.address().port}/`;
+  const port5 = port + 4;
+  const userData5 = mkdtempSync(join(tmpdir(), 'sapling-tv-e2e-'));
+  let log5 = '';
+  const child5 = spawn(
+    electronPath,
+    [root, '--dev', '--automation', '--zoom=1', `--url=${hostUrl}`, `--remote-debugging-port=${port5}`, `--user-data-dir=${userData5}`, '--no-sandbox', '--disable-gpu'],
+    { stdio: ['ignore', 'pipe', 'pipe'] },
+  );
+  child5.stdout.on('data', (d) => (log5 += d));
+  child5.stderr.on('data', (d) => (log5 += d));
+  const before = failures;
+  try {
+    let page;
+    for (let i = 0; i < 100 && !page; i++) {
+      try {
+        const targets = await (await fetch(`http://127.0.0.1:${port5}/json/list`)).json();
+        page = targets.find((t) => t.type === 'page' && t.url.startsWith(hostUrl));
+      } catch {
+        // not listening yet
+      }
+      if (!page) await sleep(200);
+    }
+    const cdp = await connect(page.webSocketDebuggerUrl);
+    const evaluate = async (expression) => (await cdp.send('Runtime.evaluate', { expression, returnByValue: true })).result.value;
+    const VK = { Enter: 13, ArrowRight: 39, ArrowLeft: 37, ArrowDown: 40, ArrowUp: 38, Escape: 27 };
+    const press = async (key, wait = 500) => {
+      const base = { key, code: key, windowsVirtualKeyCode: VK[key], nativeVirtualKeyCode: VK[key] };
+      await cdp.send('Input.dispatchKeyEvent', { type: 'rawKeyDown', ...base });
+      await cdp.send('Input.dispatchKeyEvent', { type: 'keyUp', ...base });
+      await sleep(wait);
+    };
+    const form = 'document.getElementById("form").contentDocument';
+    const ring = () => evaluate(`${form}.querySelector("[data-sapling-focus]")?.id ?? null`);
+    await sleep(1000);
+    await press('ArrowDown');
+    await press('Enter', 2500);
+    check('the pop-up is open and the keys are in the hidden inner frame', await evaluate(`[document.getElementById("dlg").open, ${form}.activeElement.id]`), [true, 'hidden']);
+    await press('ArrowDown', 800);
+    check('a key in the hidden frame brings focus to the form field around it', [await ring(), await evaluate(`${form}.activeElement.id`)], ['email', 'email']);
+    await press('Enter');
+    check('the on-screen keyboard types into the field in the frame', await evaluate(`${form}.getElementById("email").value`), 'a');
+    await press('Escape');
+    check('Back with the keyboard up puts the keyboard away and leaves the pop-up open', await evaluate('document.getElementById("dlg").open'), true);
+    await press('ArrowDown');
+    check('down moves through the form', await ring(), 'go');
+    await press('ArrowRight');
+    await press('Enter');
+    check('the purchase guard works inside a frame', [await ring(), await evaluate('log.includes("bought")')], ['buy', false]);
+    await press('ArrowLeft');
+    await press('Enter');
+    check('Enter activates a control in the frame', await evaluate('log'), ['continue']);
+    await press('Escape', 1200);
+    check('Back closes the pop-up from inside the frame', await evaluate('document.getElementById("dlg").open'), false);
+    await press('ArrowRight');
+    check('focus is back on what opened the pop-up', await evaluate('document.querySelector("[data-sapling-focus]")?.id ?? null'), 'open');
+    cdp.close();
+  } catch (err) {
+    failures += 1;
+    console.error(String(err));
+  } finally {
+    if (failures > before) appLog += `\n--- frames launch ---\n${log5}`;
+    child5.kill();
+    host.close();
+    inner.close();
+    await sleep(300);
+    rmSync(userData5, { recursive: true, force: true });
+  }
+}
+
 if (failures) {
   console.error(`\n${failures} check(s) failed\n--- app log ---\n${appLog}`);
   process.exit(1);

@@ -565,3 +565,25 @@ describe('coveredByScreen', () => {
     expect(coveredByScreen(setup('spinner'), window)).toBe(true);
   });
 });
+
+describe('frames', () => {
+  // Seen on the live site: sign-in is a pop-up whose whole content is a frame.
+  it('a frame big enough to hold controls is a focus target; a small or hidden one is not', () => {
+    document.body.innerHTML = `${card('a', 0, 0)}
+      <iframe id="form" data-rect="100,100,600,400"></iframe>
+      <iframe id="pixel" data-rect="0,500,1,1"></iframe>
+      <iframe id="flat" data-rect="100,236,600,0"></iframe>
+      <iframe id="strip" data-rect="0,600,300,40"></iframe>`;
+    const nav = new SpatialNavigator(document);
+    expect(ids(nav.candidates())).toEqual(['a', 'form']);
+  });
+
+  it('inside a pop-up, the frame is where focus goes', () => {
+    Object.defineProperty(window, 'innerHeight', { value: 540, configurable: true });
+    document.body.innerHTML = `${card('behind', 0, 0)}
+      <dialog open data-rect="0,0,960,540"><iframe id="form" data-rect="0,0,960,540"></iframe></dialog>`;
+    const nav = new SpatialNavigator(document, { scope: () => openDialog(document) });
+    nav.focusFirstIn(document.querySelector('dialog')!);
+    expect(nav.focused?.id).toBe('form');
+  });
+});

@@ -14,6 +14,9 @@ const FOCUSABLE = [
   '[role="menuitem"]',
   '[role="option"]',
   '[tabindex]:not([tabindex="-1"])',
+  // A frame holds controls of its own (a sign-in form). Focusing it hands the
+  // keys to the layer running inside it; see isFrameTarget for the size rule.
+  'iframe',
   // A styled radio or checkbox: the real input is invisible inside its label,
   // so the label is the thing to focus and click. (When the input is visible
   // it wins, because wrappers of another candidate are dropped.)
@@ -153,6 +156,12 @@ function scrollPage(scroller: Element | null, view: Window, opts: ScrollToOption
   else target.scrollTo(opts);
 }
 
+/** A frame large enough to hold controls. Tracking pixels and collapsed frames are not targets. */
+export function isFrameTarget(el: Element): boolean {
+  const r = el.getBoundingClientRect();
+  return r.width >= 120 && r.height >= 60;
+}
+
 export function rowOf(el: Element, view: Window): Element | null {
   let node = el.parentElement;
   for (let i = 0; node && i < 8; i++, node = node.parentElement) {
@@ -289,6 +298,7 @@ export class SpatialNavigator {
         if (r.bottom < above || r.top > below) continue;
       }
       if (!isVisible(el, view)) continue;
+      if (el.tagName === 'IFRAME' && !isFrameTarget(el)) continue;
       seen.add(el);
     }
     // A label tied to a toggle by `for` stands in for it only when the toggle

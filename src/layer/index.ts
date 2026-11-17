@@ -1,7 +1,7 @@
 // Entry point of the page-side layer. Runs in the preload's isolated world:
 // it shares the DOM with the site but not its JavaScript, so the site cannot
 // tamper with it and it does not modify the site's own scripts.
-import type { Action, BridgeMessage, Direction, LayerOptions } from '../shared/actions';
+import { isDirection, type Action, type BridgeMessage, type Direction, type LayerOptions } from '../shared/actions';
 import { firstMatch, type SiteAdapter } from './adapter/adapter';
 import { buildOutline, sanitizeUrl } from './diagnostics/outline';
 import { installPurchaseGuard } from './guard/purchase-guard';
@@ -11,7 +11,7 @@ import { aboutTitle, HELP, NOTICE } from '../shared/about';
 import { isSecretField, OskModel } from '../shared/osk';
 import { InjectedKeys, isNativePlayerKey, playerKeyFor, playerKeyInfo, type PlayerKey } from '../shared/player-keys';
 import { findMainVideo, isPlayerActive, playerScope } from './player';
-import { coveredByScreen, edgeControl, isVisible, openDialog, rowOf, SpatialNavigator } from './spatial/navigator';
+import { coveredByScreen, edgeControl, isFrameTarget, isVisible, openDialog, rowOf, SpatialNavigator } from './spatial/navigator';
 import { HOST_TAG, Overlay } from './ui/overlay';
 import { installSpikeProbes } from './spike';
 
@@ -39,12 +39,29 @@ export interface Layer {
   notice: (text: string) => void;
   /** The app's window stopped being the one in front: pause what is playing. */
   away: () => void;
+  /** The layer in a frame of this page ran out of controls in a direction: carry on from the frame. */
+  frameEdge: (dir: unknown) => void;
+  /** The layer in a frame of this page could not get the user out with Back: take the keys and go back. */
+  leaveFrame: () => void;
   stop: () => void;
 }
 
 export function startLayer({ doc, options, adapter, send }: LayerDeps): Layer {
   const view = doc.defaultView;
   if (!view) throw new Error('layer needs a window');
+
+  /** This layer runs in a frame of the page, not the page itself. */
+  const framed = options.frame === true;
+  const isFrameEl = (el: Element | null): boolean => el?.tagName === 'IFRAME';
+  /**
+   * This frame shows nothing (seen on the live site: the sign-in form keeps a
+   * zero-height frame from the account host and puts the keys on a hidden
+   * field in it). Nothing in it can be navigated; every key goes back to the
+   * frame around it.
+   */
+  const collapsed = (): boolean => framed && (view.innerHeight < 20 || view.innerWidth < 20);
+  /** The keys are with a frame inside this document; its own layer handles them. */
+  const keysInFrame = (): boolean => isFrameEl(doc.activeElement);
 
   const playerRoots = adapter.selectors.playerRoot;
   const inPlayer = (): boolean => isPlayerActive(doc, playerRoots);
@@ -68,7 +85,8 @@ export function startLayer({ doc, options, adapter, send }: LayerDeps): Layer {
     extraFocusable: adapter.selectors.extraFocusable,
     ignoreWithin: HOST_TAG,
     onFocusChange: (el) => {
-      overlay.track(el);
+      // No ring around a whole frame: the layer inside it draws its own.
+      overlay.track(isFrameEl(el) ? null : el);
       if (!el || !isTextEntry(el)) return;
       if (keyboardBarred(el)) return;
       openOsk(el);
@@ -91,6 +109,8 @@ export function startLayer({ doc, options, adapter, send }: LayerDeps): Layer {
     send({ kind: 'hover', x: 1, y: 1 });
   };
   const hoverOn = (target: Element): void => {
+    // A frame's coordinates are not the window's; no pointer help in frames.
+    if (framed) return;
     const r = target.getBoundingClientRect();
     hoverHost = target.parentElement ?? target;
     hoverTrigger = target;
@@ -113,7 +133,7 @@ export function startLayer({ doc, options, adapter, send }: LayerDeps): Layer {
    * menu is open after that, and Enter on the link follows it as usual.
    */
   const opensMenuFirst = (target: Element): boolean =>
-    target instanceof HTMLAnchorElement && target.getAttribute('aria-expanded') === 'false' && hoverHost === null;
+    !framed && target instanceof HTMLAnchorElement && target.getAttribute('aria-expanded') === 'false' && hoverHost === null;
 
   // Left or right with nowhere to go: press the strip's own arrow, if the
   // adapter knows it. A carousel that swaps slides leaves focus on something
@@ -142,6 +162,8 @@ export function startLayer({ doc, options, adapter, send }: LayerDeps): Layer {
     if (!hit) {
       // Nowhere to go: say so, rather than seeming not to have heard the key.
       overlay.feedback(dir);
+      // In a frame, the page around it may have somewhere to go.
+      if (framed) send({ kind: 'frameEdge', dir });
       return;
     }
     (hit.control as HTMLElement).click();
@@ -234,6 +256,7 @@ export function startLayer({ doc, options, adapter, send }: LayerDeps): Layer {
   };
 
   const mode = (): Mode => {
+    if (collapsed()) return 'browse';
     if (oskOpen) {
       // The keyboard only makes sense while its field still has focus.
       if (isTextEntry(doc.activeElement)) return 'browse';
@@ -282,6 +305,15 @@ export function startLayer({ doc, options, adapter, send }: LayerDeps): Layer {
     }, 600);
   };
 
+  /** A pop-up that closed from inside a frame: focus returns to what opened it. */
+  const restoreAfterDialog = (): void => {
+    if (!beforeDialog || openDialog(doc)) return;
+    const opener = beforeDialog;
+    beforeDialog = null;
+    const f = nav.focused;
+    if ((!f || !isVisible(f, view)) && opener.isConnected && isVisible(opener, view)) nav.focus(opener);
+  };
+
   // Up or down in the player: show the site's controls (they appear when the
   // pointer moves) and put focus on the nearest one in that direction.
   let ignorePointerUntil = 0;
@@ -320,6 +352,8 @@ export function startLayer({ doc, options, adapter, send }: LayerDeps): Layer {
   let coverTimer: number | undefined;
   let lastCloseAt = 0;
   let backStreak = 0;
+  let lastFrameBackAt = 0;
+  let frameBackStreak = 0;
   const back = (): void => {
     const active = doc.activeElement;
     if (isTextEntry(active)) {
@@ -373,6 +407,22 @@ export function startLayer({ doc, options, adapter, send }: LayerDeps): Layer {
       pressPlayerKey('close');
       return;
     }
+    if (framed) {
+      // A frame never goes back in history: that would leave the page it is
+      // part of. First ask the site with its own Escape key (seen on the live
+      // site: it closes the sign-in pop-up). If the user is still here and
+      // presses Back again, hand the keys to the page around the frame, which
+      // does its own Back. So nobody is ever stuck in a frame.
+      frameBackStreak = Date.now() - lastFrameBackAt < 4000 ? frameBackStreak + 1 : 1;
+      lastFrameBackAt = Date.now();
+      if (frameBackStreak >= 2) {
+        frameBackStreak = 0;
+        send({ kind: 'leaveFrame' });
+        return;
+      }
+      pressKey('close');
+      return;
+    }
     if (view.history.length > 1) view.history.back();
   };
 
@@ -409,7 +459,14 @@ export function startLayer({ doc, options, adapter, send }: LayerDeps): Layer {
   };
 
   const dispatch = (a: Action): void => {
+    if (collapsed()) {
+      if (a.type === 'exit') send({ kind: 'exit' });
+      else if (a.type === 'back') send({ kind: 'leaveFrame' });
+      else send({ kind: 'frameEdge', dir: a.type === 'move' ? a.dir : 'down' });
+      return;
+    }
     doc.documentElement.classList.add('sapling-no-pointer');
+    restoreAfterDialog();
     // A pending "pick focus up again" belongs to the previous key; a new key
     // overrides it (Back right after Enter must not have focus put back).
     view.clearTimeout(refocusTimer);
@@ -455,6 +512,11 @@ export function startLayer({ doc, options, adapter, send }: LayerDeps): Layer {
         const box = target?.getBoundingClientRect();
         if (target && !inPlayer() && opensMenuFirst(target)) {
           hoverOn(target);
+          break;
+        }
+        if (target && isFrameEl(target)) {
+          // Hand the keys to the frame; the layer inside it takes over.
+          (target as HTMLElement).focus();
           break;
         }
         if (!nav.activate()) {
@@ -544,15 +606,26 @@ export function startLayer({ doc, options, adapter, send }: LayerDeps): Layer {
     // Immediate: the site may also listen on the window, and must not see a
     // key the layer has taken.
     e.stopImmediatePropagation();
+    taken.add(e.key);
     dispatch(action);
   };
   view.addEventListener('keydown', onKey, true);
+  // A key the layer took on the way down is taken on the way up too. Seen on
+  // the live site: its sign-in form closes on the release of Escape, so Back
+  // meant only for the on-screen keyboard closed the whole form.
+  const taken = new Set<string>();
+  const onKeyUp = (e: KeyboardEvent): void => {
+    if (!taken.delete(e.key)) return;
+    e.preventDefault();
+    e.stopImmediatePropagation();
+  };
+  view.addEventListener('keyup', onKeyUp, true);
 
   // A text field the page focused by itself (a sign-in page puts the cursor
   // in its first field): take it as the remote's focus too, so the ring is on
   // it and the on-screen keyboard is up without a key press.
   const adoptField = (el: Element | null): void => {
-    if (!el || !isTextEntry(el) || el.closest(HOST_TAG)) return;
+    if (!el || !isTextEntry(el) || el.closest(HOST_TAG) || collapsed()) return;
     if (nav.focused !== el) nav.focus(el);
     // Already the remote's focus from before (the field was left and the page came back to it).
     else if (!oskOpen && !keyboardBarred(el)) openOsk(el);
@@ -568,7 +641,39 @@ export function startLayer({ doc, options, adapter, send }: LayerDeps): Layer {
   };
   view.addEventListener('mousemove', onPointer, { passive: true });
 
-  const stopPads = startPolling(view, mode, dispatch, options.buttons);
+  // A game controller is read by the page only (a frame from another site may
+  // not see it at all). While the keys are with a frame, its presses are sent
+  // on to the layer in that frame through the shell.
+  const stopPads = framed
+    ? (): void => undefined
+    : startPolling(view, mode, (a) => (keysInFrame() ? send({ kind: 'relay', action: a }) : dispatch(a)), options.buttons);
+
+  // In a frame: when the keys arrive, put focus somewhere useful (a text
+  // field first: a frame is usually a form); when they leave, drop the ring.
+  const focusSomethingUseful = (): void => {
+    const f = nav.focused;
+    if (f && !isFrameEl(f) && isVisible(f, view)) {
+      nav.focus(f);
+      return;
+    }
+    const field = nav.candidates().find((el) => isTextEntry(el));
+    if (!(field && nav.focus(field))) nav.focusFirstOnScreen();
+  };
+  const arriveInFrame = (): void => {
+    view.setTimeout(() => {
+      if (!doc.hasFocus() || keysInFrame() || collapsed()) return;
+      focusSomethingUseful();
+    }, 0);
+  };
+  const departFrame = (): void => {
+    closeOsk();
+    overlay.track(null);
+  };
+  if (framed) {
+    view.addEventListener('focus', arriveInFrame);
+    view.addEventListener('blur', departFrame);
+    if (doc.hasFocus()) arriveInFrame();
+  }
 
   // Tell the shell when video is playing so it can hold off the screensaver.
   let lastPlaying = false;
@@ -585,6 +690,7 @@ export function startLayer({ doc, options, adapter, send }: LayerDeps): Layer {
     if (playing && !onPlayerControl()) overlay.track(null);
     // A pop-up that opened on its own takes focus too.
     if (!playing) enterDialog();
+    restoreAfterDialog();
     if (playing !== lastPlaying) {
       lastPlaying = playing;
       send({ kind: 'playback', playing });
@@ -614,8 +720,32 @@ export function startLayer({ doc, options, adapter, send }: LayerDeps): Layer {
         pressKey('playPause');
       }
     },
+    frameEdge: (raw) => {
+      if (!isDirection(raw)) return;
+      const host = doc.activeElement;
+      if (!host || !isFrameEl(host)) return;
+      // A frame that shows nothing had the keys: take them back to where
+      // the user was, or to the first useful control. No move is made.
+      if (!isFrameTarget(host)) {
+        focusSomethingUseful();
+        return;
+      }
+      // Carry on from the frame as if it were the focused control. A move
+      // focuses something in this document, which takes the keys back.
+      if (nav.focused !== host) nav.focus(host);
+      if (!nav.move(raw) && framed) send({ kind: 'frameEdge', dir: raw });
+    },
+    leaveFrame: () => {
+      if (!keysInFrame()) return;
+      view.focus();
+      (doc.activeElement as HTMLElement | null)?.blur();
+      back();
+    },
     stop: () => {
+      view.removeEventListener('focus', arriveInFrame);
+      view.removeEventListener('blur', departFrame);
       view.removeEventListener('keydown', onKey, true);
+      view.removeEventListener('keyup', onKeyUp, true);
       doc.removeEventListener('focusin', onFocusIn, true);
       view.removeEventListener('mousemove', onPointer);
       view.clearInterval(playbackTimer);
