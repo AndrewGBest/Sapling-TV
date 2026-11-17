@@ -142,9 +142,9 @@ this repository and it will be addressed promptly.
 
 ## Licence
 
-GPL-3.0. See [LICENSE](LICENSE). You are free to use, study, share and change
-this software; if you distribute a modified version, you must make its source
-available under the same licence.
+AGPL-3.0. See [LICENSE](LICENSE). You are free to use, study, share and change
+this software; if you distribute a modified version, or let people use one
+over a network, you must make its source available under the same licence.
 
 The licence covers the code, not the project's name. If you publish a fork,
 please give it a different name so users can tell the two apart.

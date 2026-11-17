@@ -19,7 +19,6 @@ only with evidence from this service.
 | 2026-11-13 | No ad blocking, ever |
 | 2026-11-13 | Purchase guard only in automation mode |
 | 2026-11-13 | No end-to-end test framework; the harness speaks the DevTools protocol |
-| 2026-11-13 | GPL-3.0 |
 | 2026-11-13 | Refused navigations are shown (toast, or a notice page) and logged without queries |
 | 2026-11-13 | The player is controlled only by ordinary key presses |
 | 2026-11-14 | Player controls are the site's own, revealed by a pointer movement |
@@ -119,3 +118,15 @@ project has avoided so far. Andrew's call.
 updating the 42 line, or Andrew chooses the alternative.
 **Not checked:** the picture by eye (it was not looked at during playback);
 sound; any other title; bare metal.
+
+## 2026-11-17: Licence is AGPL-3.0
+
+**Decision (Andrew):** the GitHub repository was created with the GNU Affero
+General Public License v3 as its first commit. Sapling TV uses it; Tropic
+Video's GPL-3.0 file was not carried over. `package.json` says
+`AGPL-3.0-only`; whether to allow "or any later version" was not discussed,
+as with Tropic Video.
+**Reason recorded:** the agent read the repository's licence file; Andrew's
+reason was not given. AGPL adds to GPL the duty to offer source to people who
+use a modified version over a network.
+**Reopen if:** Andrew meant GPL-3.0 for consistency with Tropic Video.
