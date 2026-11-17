@@ -102,3 +102,20 @@ export function pickInitial(candidates: readonly Rect[]): number {
   });
   return best;
 }
+
+/**
+ * After a strip has turned (its arrow scrolled it sideways): the control to
+ * take focus, from those wholly inside the screen's width. Moving right, the
+ * leftmost; moving left, the rightmost; the upper one breaks a tie. -1 when
+ * none is wholly on screen.
+ */
+export function pickAfterTurn(candidates: readonly Rect[], viewWidth: number, dir: 'left' | 'right'): number {
+  let best = -1;
+  candidates.forEach((c, i) => {
+    if (c.left < 0 || c.right > viewWidth) return;
+    const b = best === -1 ? undefined : candidates[best];
+    const edge = (r: Rect): number => (dir === 'right' ? r.left : -r.right);
+    if (!b || edge(c) < edge(b) - 1 || (Math.abs(edge(c) - edge(b)) <= 1 && c.top < b.top)) best = i;
+  });
+  return best;
+}

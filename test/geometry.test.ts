@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { pickInitial, pickNext, score, type Rect } from '../src/layer/spatial/geometry';
+import { pickAfterTurn, pickInitial, pickNext, score, type Rect } from '../src/layer/spatial/geometry';
 
 const box = (left: number, top: number, w = 100, h = 60): Rect => ({ left, top, right: left + w, bottom: top + h });
 
@@ -66,5 +66,28 @@ describe('pickInitial', () => {
   });
   it('handles an empty list', () => {
     expect(pickInitial([])).toBe(-1);
+  });
+});
+
+describe('pickAfterTurn', () => {
+  // A strip of cards 960 wide after its arrow was pressed: cards 0 and 1 have
+  // scrolled off to the left, 2 to 5 are on screen, 6 is cut by the right edge.
+  const strip = [box(-240, 0), box(-120, 0), box(20, 0), box(140, 0), box(260, 0), box(380, 0), box(900, 0)];
+
+  it('moving right, takes the first card wholly on screen from the left', () => {
+    expect(pickAfterTurn(strip, 960, 'right')).toBe(2);
+  });
+
+  it('moving left, takes the first card wholly on screen from the right', () => {
+    expect(pickAfterTurn(strip, 960, 'left')).toBe(5);
+  });
+
+  it('prefers the upper of two cards in the same column', () => {
+    expect(pickAfterTurn([box(20, 200), box(20, 100)], 960, 'right')).toBe(1);
+  });
+
+  it('answers -1 when nothing is wholly on screen', () => {
+    expect(pickAfterTurn([box(-50, 0), box(930, 0)], 960, 'right')).toBe(-1);
+    expect(pickAfterTurn([], 960, 'left')).toBe(-1);
   });
 });

@@ -69,6 +69,30 @@ describe('the adapter is backed by outlines', () => {
     }
   });
 
+  it('shelf arrows: each shelf has one previous and one next button beside its list, outside the cards', () => {
+    const dom = fromOutline('channel-shelf.txt');
+    const shelf = dom.querySelector('[data-testid="shelf-component"]')!;
+    const prev = shelf.querySelectorAll(adapter.selectors.rowPrev[0]!);
+    const next = shelf.querySelectorAll(adapter.selectors.rowNext[0]!);
+    expect(prev).toHaveLength(1);
+    expect(next).toHaveLength(1);
+    expect(next[0]!.tagName).toBe('BUTTON');
+    expect(next[0]!.parentElement!.querySelector('ul[role="list"]')).not.toBeNull();
+    expect(next[0]!.closest('li')).toBeNull();
+    // Cards past the first screenful are placeholders hidden from focus: only the arrow brings them in.
+    expect(shelf.querySelector('li[aria-hidden="true"] a')).toBeNull();
+  });
+
+  it("a card's more button is never a focus target; the card's own link still is", () => {
+    const dom = fromOutline('channel-shelf.txt');
+    const card = dom.querySelector('[data-testid="lockup-container"]')!;
+    const skipped = card.querySelectorAll(adapter.selectors.notFocusable.join(','));
+    expect(skipped).toHaveLength(1);
+    expect(skipped[0]!.tagName).toBe('BUTTON');
+    expect(skipped[0]!.getAttribute('aria-haspopup')).toBe('true');
+    expect(card.querySelector('a[data-testid="lockup"]')!.matches(adapter.selectors.notFocusable.join(','))).toBe(false);
+  });
+
   it('rebuilds an outline into elements the selectors can be checked against', () => {
     const dom = fromOutlineText(
       ['div[data-testid="row"]', '  ul', '    li', '      a.card[href:12]{text:5}', '  button[aria-label:4]'].join('\n'),
@@ -80,5 +104,3 @@ describe('the adapter is backed by outlines', () => {
   });
 });
 
-// Kept for the first evidence-backed selector; see the note at the top.
-void fromOutline;

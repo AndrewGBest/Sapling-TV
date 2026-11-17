@@ -214,6 +214,20 @@ describe('carousels', () => {
     expect(edgeControl(document.getElementById('lonely')!, ['.next'], window)).toBeNull();
   });
 
+  // Seen on the live site: a shelf scrolls a page of cards sideways when its arrow is pressed, so the card that had focus is now off screen.
+  it('after a turn, moves focus from a card scrolled off screen to the first one now showing', () => {
+    Object.defineProperty(window, 'innerWidth', { value: 960, configurable: true });
+    document.getElementById('hero')!.querySelector('ul')!.innerHTML =
+      `<li>${card('c1', -200, 300)}</li><li>${card('c2', 60, 300)}</li><li>${card('c3', 200, 300)}</li>`;
+    const nav = new SpatialNavigator(document, { skip: ['.arrow'] });
+    nav.focus(document.getElementById('c1'));
+    expect(nav.focusAfterTurn(document.getElementById('hero')!, 'right')).toBe(true);
+    expect(nav.focused?.id).toBe('c2');
+    nav.focus(document.getElementById('c1'));
+    expect(nav.focusAfterTurn(document.getElementById('hero')!, 'left')).toBe(true);
+    expect(nav.focused?.id).toBe('c3');
+  });
+
   it('can focus the first control of the slide now showing', () => {
     const nav = new SpatialNavigator(document, { skip: ['.arrow'] });
     nav.focusFirstIn(document.getElementById('hero')!);

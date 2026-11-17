@@ -168,6 +168,8 @@ describe('adapter parsing', () => {
     expect(a.revision).toBe(3);
     expect(parseAdapter({ schema: 2, selectors: { extraFocusable: ['.x'] } }).selectors.extraFocusable).toEqual([]);
     expect(parseAdapter(null).id).toBe('none');
+    expect(parseAdapter({ schema: 1, selectors: { notFocusable: ['.more', '>>bad<<'] } }, document).selectors.notFocusable).toEqual(['.more']);
+    expect(parseAdapter(null).selectors.notFocusable).toEqual([]);
   });
 });
 

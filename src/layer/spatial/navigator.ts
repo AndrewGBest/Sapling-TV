@@ -1,6 +1,6 @@
 // DOM side of directional focus: finds candidates, moves focus, activates.
 import type { Direction } from '../../shared/actions';
-import { pickInitial, pickNext, type Rect } from './geometry';
+import { pickAfterTurn, pickInitial, pickNext, type Rect } from './geometry';
 
 const FOCUSABLE = [
   'a[href]',
@@ -356,6 +356,17 @@ export class SpatialNavigator {
   }
 
   /** Focuses the first candidate inside `container`, reading order. */
+  /**
+   * After a strip turned and what had focus scrolled off screen: focus the
+   * first control now showing in it, on the side the user is moving towards.
+   */
+  focusAfterTurn(container: Element, dir: 'left' | 'right'): boolean {
+    const view = this.doc.defaultView;
+    if (!view) return false;
+    const inside = this.candidates().filter((el) => container.contains(el));
+    return this.focus(inside[pickAfterTurn(inside.map(toRect), view.innerWidth, dir)] ?? null);
+  }
+
   focusFirstIn(container: Element): boolean {
     const inside = this.candidates().filter((el) => container.contains(el));
     return this.focus(inside[pickInitial(inside.map(toRect))] ?? null);

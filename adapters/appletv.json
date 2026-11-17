@@ -1,15 +1,22 @@
 {
   "id": "appletv",
   "schema": 1,
-  "revision": 0,
-  "verified": false,
-  "note": "Empty on purpose. No selector may be added without a diagnostics outline from the live site that shows it (Hard rule 7). Put the trimmed outline in test/fixtures/outlines/, add a test to test/adapter-evidence.test.ts, bump revision and set verified to true. Until then the generic heuristics run alone.",
+  "revision": 2,
+  "verified": true,
+  "note": "No selector in this file may be added without a diagnostics outline from the live site that shows it (Hard rule 7). Evidence is in test/fixtures/outlines/ (captured 2026-11-17, signed out) and is checked by test/adapter-evidence.test.ts. Everything not listed here is left to the generic heuristics.",
   "selectors": {
     "extraFocusable": [],
     "searchInput": [],
     "searchOpen": [],
-    "rowPrev": [],
-    "rowNext": [],
+    "rowPrev": [
+      "button[data-testid=\"shelf-button-left\"]"
+    ],
+    "rowNext": [
+      "button[data-testid=\"shelf-button-right\"]"
+    ],
+    "notFocusable": [
+      "[data-testid=\"lockup-context-menu\"] button"
+    ],
     "playerRoot": [],
     "playerClose": [],
     "purchaseControls": []

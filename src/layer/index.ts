@@ -11,7 +11,7 @@ import { aboutTitle, HELP, NOTICE } from '../shared/about';
 import { isSecretField, OskModel } from '../shared/osk';
 import { InjectedKeys, isNativePlayerKey, playerKeyFor, playerKeyInfo, type PlayerKey } from '../shared/player-keys';
 import { findMainVideo, isPlayerActive, playerScope } from './player';
-import { coveredByScreen, edgeControl, isVisible, openDialog, SpatialNavigator } from './spatial/navigator';
+import { coveredByScreen, edgeControl, isVisible, openDialog, rowOf, SpatialNavigator } from './spatial/navigator';
 import { HOST_TAG, Overlay } from './ui/overlay';
 import { installSpikeProbes } from './spike';
 
@@ -74,7 +74,7 @@ export function startLayer({ doc, options, adapter, send }: LayerDeps): Layer {
       openOsk(el);
     },
     scope,
-    skip: [...adapter.selectors.rowPrev, ...adapter.selectors.rowNext],
+    skip: [...adapter.selectors.rowPrev, ...adapter.selectors.rowNext, ...adapter.selectors.notFocusable],
   });
 
   // Some menus open only when the pointer rests on their button. If Enter on
@@ -119,6 +119,10 @@ export function startLayer({ doc, options, adapter, send }: LayerDeps): Layer {
   // adapter knows it. A carousel that swaps slides leaves focus on something
   // no longer shown, so focus then moves to the new slide.
   let edgeTimer: number | undefined;
+  const whollyOnScreenX = (el: Element): boolean => {
+    const r = el.getBoundingClientRect();
+    return r.left >= 0 && r.right <= view.innerWidth;
+  };
   const moveInPage = (dir: Direction): void => {
     let moved = nav.move(dir);
     // Sideways out of an open menu: close it and carry on along the bar.
@@ -142,10 +146,32 @@ export function startLayer({ doc, options, adapter, send }: LayerDeps): Layer {
     }
     (hit.control as HTMLElement).click();
     view.clearTimeout(edgeTimer);
-    edgeTimer = view.setTimeout(() => {
+    if (dir !== 'left' && dir !== 'right') return;
+    // Once the strip has settled: if what had focus is no longer wholly on
+    // screen (a carousel swapped its slide, or a strip scrolled the card out
+    // of sight), focus the first control now showing on the side moved to.
+    const settle = (): void => {
       const f = nav.focused;
-      if (!f || !isVisible(f, view)) nav.focusFirstIn(hit.container);
-    }, 700);
+      if (f && isVisible(f, view) && whollyOnScreenX(f)) return;
+      if (!nav.focusAfterTurn(hit.container, dir)) nav.focusFirstIn(hit.container);
+    };
+    // A strip that scrolls smoothly takes longer than a fixed wait (seen on
+    // the live site), so wait for it to stop, with a timer in case it never says.
+    const strip = rowOf(from, view);
+    if (strip && 'onscrollend' in view) {
+      let done = false;
+      const finish = (): void => {
+        if (done) return;
+        done = true;
+        strip.removeEventListener('scrollend', finish);
+        view.clearTimeout(edgeTimer);
+        settle();
+      };
+      strip.addEventListener('scrollend', finish);
+      edgeTimer = view.setTimeout(finish, 1500);
+    } else {
+      edgeTimer = view.setTimeout(settle, 700);
+    }
   };
 
   /**
