@@ -57,7 +57,7 @@ for (const [key, val] of Object.entries({
   appId: pkg.build?.appId,
   artifactName: pkg.build?.artifactName,
 })) {
-  if (typeof val === 'string' && /prime|amazon|amzn|fire\s?tv/i.test(val)) {
+  if (typeof val === 'string' && /apple|itunes|tvos|\bios\b|\bmac\b/i.test(val)) {
     fail(5, 'package.json', `${key} contains a trademark: "${val}"`);
   }
 }

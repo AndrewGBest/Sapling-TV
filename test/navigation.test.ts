@@ -15,8 +15,9 @@ const auto = { dev: false, automation: true };
 
 describe('blockReason', () => {
   it('lets the service and its sign-in pages through', () => {
-    expect(blockReason('https://www.primevideo.com/', live)).toBeNull();
-    expect(blockReason('https://www.amazon.ca/ap/signin', auto)).toBeNull();
+    expect(blockReason('https://tv.apple.com/', live)).toBeNull();
+    expect(blockReason('https://tv.apple.com/', auto)).toBeNull();
+    expect(blockReason('https://idmsa.apple.com/appleauth/auth/signin', auto)).toBeNull();
   });
 
   it('refuses other sites in every mode', () => {
@@ -26,7 +27,7 @@ describe('blockReason', () => {
   });
 
   it('refuses spend-looking pages only under automation', () => {
-    const url = 'https://www.primevideo.com/offers/landing?ref_=abc';
+    const url = 'https://tv.apple.com/subscribe?ref=abc';
     expect(blockReason(url, live)).toBeNull();
     expect(blockReason(url, auto)).toBe('automation-spend');
   });

@@ -7,6 +7,7 @@ import type { BridgeMessage, LayerOptions, SpikeEvent } from '../shared/actions'
 import { parseConfig, type UserConfig } from '../shared/config';
 import { typableText } from '../shared/osk';
 import { playerKeyInfo } from '../shared/player-keys';
+import { ADAPTER_FILE, APP_NAME, HOME_URL, LOG_PREFIX } from '../shared/service';
 import { browserUserAgent, isAllowedUrl } from './hosts';
 import { hoverPoint, tvZoom } from './zoom';
 import {
@@ -20,7 +21,6 @@ import {
   retryDelaySeconds,
 } from './navigation';
 
-const HOME_URL = 'https://www.primevideo.com/';
 const argv = process.argv.slice(1);
 const flag = (name: string): boolean => argv.includes(`--${name}`);
 const value = (name: string): string | undefined =>
@@ -62,18 +62,18 @@ function loadConfig(): UserConfig {
   try {
     raw = JSON.parse(readFileSync(file, 'utf8'));
   } catch (err) {
-    if ((err as NodeJS.ErrnoException).code !== 'ENOENT') console.error(`[sapling-tv] config.json could not be read: ${String(err).slice(0, 200)}`);
+    if ((err as NodeJS.ErrnoException).code !== 'ENOENT') console.error(`${LOG_PREFIX} config.json could not be read: ${String(err).slice(0, 200)}`);
     return { keys: {} };
   }
   const { config, problems } = parseConfig(raw);
-  for (const problem of problems) console.error(`[sapling-tv] config.json: ${problem}`);
+  for (const problem of problems) console.error(`${LOG_PREFIX} config.json: ${problem}`);
   return config;
 }
 let userConfig: UserConfig = { keys: {} };
 
 function loadAdapter(): unknown {
   try {
-    return JSON.parse(readFileSync(join(app.getAppPath(), 'adapters', 'primevideo.json'), 'utf8'));
+    return JSON.parse(readFileSync(join(app.getAppPath(), 'adapters', ADAPTER_FILE), 'utf8'));
   } catch {
     return null;
   }
@@ -96,7 +96,7 @@ function createWindow(ready: Promise<void>): BrowserWindow {
     fullscreen: flag('fullscreen') || (!options.dev && !options.spike),
     backgroundColor: '#000000',
     autoHideMenuBar: true,
-    title: 'Sapling TV',
+    title: APP_NAME,
     webPreferences: {
       preload: join(__dirname, 'preload.js'),
       contextIsolation: true,
@@ -124,7 +124,7 @@ function createWindow(ready: Promise<void>): BrowserWindow {
   let retryAttempt = 0;
   wc.on('did-fail-load', (_e, code, description, url, isMainFrame) => {
     if (!isMainFrame || !isLoadFailure(code, url)) return;
-    console.error(`[sapling-tv] page failed to load (${code} ${description}): ${describeBlockedUrl(url)}`);
+    console.error(`${LOG_PREFIX} page failed to load (${code} ${description}): ${describeBlockedUrl(url)}`);
     if (blockReason(url, options)) return;
     retryAttempt += 1;
     const wait = retryDelaySeconds(retryAttempt);
@@ -138,7 +138,7 @@ function createWindow(ready: Promise<void>): BrowserWindow {
     if (!url.startsWith('data:') && url !== 'about:blank') retryAttempt = 0;
   });
   wc.on('render-process-gone', (_e, details) => {
-    console.error(`[sapling-tv] renderer exited: ${details.reason}`);
+    console.error(`${LOG_PREFIX} renderer exited: ${details.reason}`);
   });
 
   // True once a real page has been shown. Until then a refused navigation
@@ -152,7 +152,7 @@ function createWindow(ready: Promise<void>): BrowserWindow {
   const allowed = (url: string): boolean => {
     const reason = blockReason(url, options);
     if (!reason) return true;
-    console.error(`[sapling-tv] blocked navigation (${reason}): ${describeBlockedUrl(url)}`);
+    console.error(`${LOG_PREFIX} blocked navigation (${reason}): ${describeBlockedUrl(url)}`);
     if (pageShown) {
       wc.send('sapling:notice', blockedMessage(reason));
     } else {
@@ -364,7 +364,7 @@ async function main(): Promise<void> {
         widevine = `component error: ${String(err)}`;
       }
     }
-    console.log('[sapling-tv] widevine component:', JSON.stringify(widevine));
+    console.log(LOG_PREFIX + ' widevine component:', JSON.stringify(widevine));
     if (options.spike) {
       spikeReport = {
         startedAt: new Date().toISOString(),
@@ -374,7 +374,7 @@ async function main(): Promise<void> {
         events: [],
       };
       saveSpikeReport();
-      console.log('[sapling-tv] spike report:', join(app.getPath('userData'), 'spike-report.json'));
+      console.log(LOG_PREFIX + ' spike report:', join(app.getPath('userData'), 'spike-report.json'));
     }
   })();
 

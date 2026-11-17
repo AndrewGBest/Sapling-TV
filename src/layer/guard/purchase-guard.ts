@@ -2,11 +2,14 @@
 // AI agent, no click may reach a control that could spend money or start a
 // subscription. Ordinary users are never affected: this is only installed in
 // automation mode.
+// Heuristic wording, not yet checked against the live site. "get apple tv" is
+// the service's own name for its subscription offer (a guess at its button
+// wording); naming it here in code is description, not branding.
 const SPEND_WORDS =
-  /\b(buy|rent|purchase|pre-?order|subscribe|subscription|free trial|start (your )?trial|join prime|sign up|upgrade|(go )?ad[- ]free|add to (cart|basket)|place (your )?order|pay now|checkout|1-click)\b/i;
+  /\b(buy|rent|purchase|pre-?order|subscribe|subscription|free trial|start (your )?trial|try (it )?free|accept (the )?offer|get apple tv|sign up|upgrade|(go )?ad[- ]free|add to (cart|basket)|place (your )?order|pay now|checkout|redeem)\b/i;
 
 /** URL fragments that indicate a payment or sign-up flow. Heuristic until confirmed on the live site. */
-const SPEND_URL = /(checkout|\/buy\b|\/gp\/buy|purchase|signup|sign-up|\/offers?\b|subscribe|payment)/i;
+const SPEND_URL = /(checkout|\/buy\b|purchase|signup|sign-up|\/offers?\b|subscribe|payment|\/redeem\b)/i;
 
 export function looksLikeSpendUrl(url: string): boolean {
   try {

@@ -60,10 +60,11 @@ device serial (see `DESIGN.md` section 2 for what was found in one such repo).
 Every release, the README and the About screen carry:
 
 > Sapling TV is an unofficial, independent project. It is not affiliated
-> with, endorsed by or supported by Amazon. Prime Video and Amazon are
-> trademarks of Amazon.com, Inc. or its affiliates. A valid subscription is
-> required. Sapling TV does not provide, unlock or bypass access to any
-> content and does not remove or work around DRM.
+> with, endorsed by or supported by Apple. Apple and Apple TV are trademarks
+> of Apple Inc., registered in the U.S. and other countries and regions. An
+> Apple Account and a subscription or purchase are required to watch.
+> Sapling TV does not provide, unlock or bypass access to any content and
+> does not remove or work around DRM.
 
 ## Sources
 

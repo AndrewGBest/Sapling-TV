@@ -21,7 +21,13 @@ describe('purchase guard', () => {
     '<a id="t" href="/x">Start your free trial</a>',
     '<button><span id="t">Subscribe</span></button>',
     '<div role="button" id="t" aria-label="Pre-order now"></div>',
-    '<a id="t" href="/gp/buy/spc/handlers/display.html">Continue</a>',
+    '<a id="t" href="/buy/confirm">Continue</a>',
+    // Wording common on subscription video sites; invented markup, not captured from any page.
+    '<button id="t">Accept Free Trial</button>',
+    '<button id="t">Try It Free</button>',
+    '<a id="t" href="/x">Accept Offer</a>',
+    '<button id="t">Get Apple TV</button>',
+    '<button id="t">Upgrade to the plan without ads</button>',
     '<input id="t" type="submit" value="Place your order">',
     '<form action="/checkout/confirm"><button id="t">Continue</button></form>',
   ])('blocks %s', (markup) => {
@@ -35,6 +41,9 @@ describe('purchase guard', () => {
     '<a id="t" href="/detail/abc">More details</a>',
     '<button id="t">Add to Watchlist</button>',
     '<button id="t">Subtitles</button>',
+    '<button id="t">Play Trailer</button>',
+    '<button id="t">Up Next</button>',
+    '<a id="t" href="/x">Sign In</a>',
   ])('allows %s', (markup) => {
     html(markup);
     expect(isSpendControl(document.getElementById('t')!)).toBe(false);
@@ -63,8 +72,12 @@ describe('purchase guard', () => {
   });
 
   it('flags spend URLs and refuses unparseable ones', () => {
-    expect(looksLikeSpendUrl('https://www.example.com/gp/buy/thing')).toBe(true);
+    expect(looksLikeSpendUrl('https://www.example.com/buy/thing')).toBe(true);
     expect(looksLikeSpendUrl('https://www.example.com/detail/123')).toBe(false);
+    expect(looksLikeSpendUrl('https://tv.apple.com/subscribe')).toBe(true);
+    expect(looksLikeSpendUrl('https://tv.apple.com/us/redeem?code=x')).toBe(true);
+    expect(looksLikeSpendUrl('https://tv.apple.com/us/show/x/umc.cmc.0abc')).toBe(false);
+    expect(looksLikeSpendUrl('https://tv.apple.com/us/movie/x/umc.cmc.0abc')).toBe(false);
     expect(looksLikeSpendUrl('http://[bad')).toBe(true);
   });
 });
@@ -139,7 +152,7 @@ describe('diagnostics outline', () => {
   });
 
   it('reduces URLs to a path shape', () => {
-    expect(sanitizeUrl('https://www.primevideo.com/detail/0ABCD12345XYZ/ref=x?autoplay=1&t=99')).toBe(
+    expect(sanitizeUrl('https://tv.apple.com/detail/0ABCD12345XYZ/ref=x?autoplay=1&t=99')).toBe(
       'https://<host>/detail/:id/ref=x',
     );
   });
@@ -160,15 +173,28 @@ describe('adapter parsing', () => {
 
 describe('navigation allowlist', () => {
   it('allows the service and its account pages over https only', () => {
-    expect(isAllowedUrl('https://www.primevideo.com/')).toBe(true);
-    expect(isAllowedUrl('https://www.amazon.ca/ap/signin')).toBe(true);
-    expect(isAllowedUrl('http://www.primevideo.com/')).toBe(false);
+    expect(isAllowedUrl('https://tv.apple.com/')).toBe(true);
+    expect(isAllowedUrl('https://tv.apple.com/us/show/x/umc.cmc.0abc')).toBe(true);
+    expect(isAllowedUrl('https://idmsa.apple.com/appleauth/auth/signin')).toBe(true);
+    expect(isAllowedUrl('https://account.apple.com/')).toBe(true);
+    expect(isAllowedUrl('https://appleid.apple.com/')).toBe(true);
+    expect(isAllowedUrl('https://iforgot.apple.com/')).toBe(true);
+    expect(isAllowedUrl('http://tv.apple.com/')).toBe(false);
+  });
+
+  it('allows only the named hosts of the vendor, not the whole vendor domain', () => {
+    // The vendor's domain also carries its shop and other services; none of them belong here.
+    expect(isAllowedUrl('https://www.apple.com/shop/buy-iphone')).toBe(false);
+    expect(isAllowedUrl('https://apple.com/')).toBe(false);
+    expect(isAllowedUrl('https://apps.apple.com/')).toBe(false);
+    expect(isAllowedUrl('https://music.apple.com/')).toBe(false);
+    expect(isAllowedUrl('https://evil.tv.apple.com.example/')).toBe(false);
   });
 
   it('rejects look-alikes and other sites', () => {
-    expect(isAllowedUrl('https://primevideo.com.evil.example/')).toBe(false);
-    expect(isAllowedUrl('https://evilprimevideo.com/')).toBe(false);
-    expect(isAllowedUrl('https://user:pw@www.primevideo.com/')).toBe(false);
+    expect(isAllowedUrl('https://tv.apple.com.evil.example/')).toBe(false);
+    expect(isAllowedUrl('https://eviltv.apple.com/')).toBe(false);
+    expect(isAllowedUrl('https://user:pw@tv.apple.com/')).toBe(false);
     expect(isAllowedUrl('https://example.com/')).toBe(false);
     expect(isAllowedUrl('javascript:alert(1)')).toBe(false);
     expect(isAllowedUrl('file:///etc/passwd')).toBe(false);

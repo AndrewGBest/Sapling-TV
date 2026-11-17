@@ -1,19 +1,16 @@
 // Which sites the window may navigate to. The app is a front end for one
 // service; anything else is refused rather than opened.
-const SERVICE_HOSTS = ['primevideo.com'];
+//
+// The vendor's domain also carries its shop, app store and other services, so
+// whole-domain matching would let the window wander into a store. Only these
+// exact hosts are accepted.
+const SERVICE_HOSTS = new Set(['tv.apple.com']);
 
-// Sign-in is handled on the retailer's own account pages, which live on
-// country domains. Only the registrable domains below are accepted.
-const ACCOUNT_DOMAINS = new Set([
-  'amazon.com', 'amazon.ca', 'amazon.co.uk', 'amazon.de', 'amazon.fr', 'amazon.it', 'amazon.es',
-  'amazon.nl', 'amazon.se', 'amazon.pl', 'amazon.com.be', 'amazon.com.tr', 'amazon.co.jp',
-  'amazon.in', 'amazon.com.au', 'amazon.com.br', 'amazon.com.mx', 'amazon.sg', 'amazon.ae',
-  'amazon.sa', 'amazon.eg', 'amazon.co.za', 'amazon.ie',
-]);
-
-function matchesDomain(host: string, domain: string): boolean {
-  return host === domain || host.endsWith(`.${domain}`);
-}
+// Sign-in and account recovery pages. The service normally signs in inside a
+// frame on its own page (frames are not governed by this list); these cover a
+// sign-in or recovery step that takes over the whole window. **[Guess]** until
+// seen on the live site: which of these the service actually navigates to.
+const ACCOUNT_HOSTS = new Set(['idmsa.apple.com', 'appleid.apple.com', 'account.apple.com', 'iforgot.apple.com']);
 
 export function isAllowedUrl(raw: string, opts: { dev: boolean } = { dev: false }): boolean {
   let u: URL;
@@ -29,11 +26,7 @@ export function isAllowedUrl(raw: string, opts: { dev: boolean } = { dev: false 
   if (u.protocol !== 'https:') return false;
   if (u.username || u.password) return false;
   const host = u.hostname.toLowerCase();
-  if (SERVICE_HOSTS.some((d) => matchesDomain(host, d))) return true;
-  for (const d of ACCOUNT_DOMAINS) {
-    if (matchesDomain(host, d)) return true;
-  }
-  return false;
+  return SERVICE_HOSTS.has(host) || ACCOUNT_HOSTS.has(host);
 }
 
 /**

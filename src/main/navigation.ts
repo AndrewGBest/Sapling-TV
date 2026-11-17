@@ -1,6 +1,7 @@
 // Why a navigation was refused, and what to tell the person at the screen.
 // Pure: no Electron imports, so every rule here is unit-tested.
 import { looksLikeSpendUrl } from '../layer/guard/purchase-guard';
+import { APP_NAME } from '../shared/service';
 import { isAllowedUrl } from './hosts';
 
 export type BlockReason = 'other-site' | 'automation-spend';
@@ -43,7 +44,7 @@ function noticePage(title: string, heading: string, paragraphs: readonly string[
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>Sapling TV: ${escapeHtml(title)}</title>
+<title>${escapeHtml(APP_NAME)}: ${escapeHtml(title)}</title>
 <style>
   html, body { height: 100%; margin: 0; background: #000; color: #eee; font: 3.6vh/1.5 system-ui, sans-serif; }
   main { box-sizing: border-box; height: 100%; max-width: 80vw; margin: 0 auto; display: flex; flex-direction: column; justify-content: center; gap: 2vh; }
