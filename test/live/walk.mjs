@@ -47,7 +47,7 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 // Runs in the page. Reports the focused element's tag, role, test id (with
 // anything id-like or personal masked), box and the scroll position.
 const probe = `(() => {
-  const e = document.querySelector('[data-tropic-focus]');
+  const e = document.querySelector('[data-sapling-focus]');
   if (!e) return 'NONE';
   const r = e.getBoundingClientRect();
   const raw = e.getAttribute('data-testid') || e.getAttribute('data-automation-id') || e.closest('[data-testid]')?.getAttribute('data-testid') || '';

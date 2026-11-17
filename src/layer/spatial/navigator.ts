@@ -30,9 +30,9 @@ function labelledToggle(label: Element): HTMLInputElement | null {
   return target instanceof HTMLInputElement && (target.type === 'checkbox' || target.type === 'radio') ? target : null;
 }
 
-export const FOCUS_ATTR = 'data-tropic-focus';
+export const FOCUS_ATTR = 'data-sapling-focus';
 /** Set on a focused element small enough to grow, as focused cards do on a TV. */
-export const ZOOM_ATTR = 'data-tropic-zoom';
+export const ZOOM_ATTR = 'data-sapling-zoom';
 
 /** A focused card grows; a banner, a text field or a slider does not. */
 export function shouldZoom(el: Element, view: Window): boolean {

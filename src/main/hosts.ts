@@ -44,7 +44,7 @@ export function isAllowedUrl(raw: string, opts: { dev: boolean } = { dev: false 
 export function browserUserAgent(defaultUa: string): string {
   return defaultUa
     .replace(/\s?Electron\/\S+/g, '')
-    .replace(/\s?tropic-video\/\S+/gi, '')
+    .replace(/\s?sapling-tv\/\S+/gi, '')
     .replace(/\s{2,}/g, ' ')
     .trim();
 }

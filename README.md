@@ -1,4 +1,4 @@
-# Tropic Video
+# Sapling TV
 
 An unofficial TV-style front end for watching Prime Video on a Linux HTPC,
 driven by a game controller, remote or keyboard.
@@ -9,10 +9,10 @@ tried so far (a Fedora virtual machine and the owner's Linux TV box). It has
 not been tried with a physical game controller. See
 [docs/STATUS.md](docs/STATUS.md) for exactly what has and has not been checked.
 
-> Tropic Video is an unofficial, independent project. It is not affiliated
+> Sapling TV is an unofficial, independent project. It is not affiliated
 > with, endorsed by or supported by Amazon. Prime Video and Amazon are
 > trademarks of Amazon.com, Inc. or its affiliates. A valid subscription is
-> required. Tropic Video does not provide, unlock or bypass access to any
+> required. Sapling TV does not provide, unlock or bypass access to any
 > content and does not remove or work around DRM.
 
 ## What it is

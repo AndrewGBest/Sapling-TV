@@ -62,11 +62,11 @@ function loadConfig(): UserConfig {
   try {
     raw = JSON.parse(readFileSync(file, 'utf8'));
   } catch (err) {
-    if ((err as NodeJS.ErrnoException).code !== 'ENOENT') console.error(`[tropic-video] config.json could not be read: ${String(err).slice(0, 200)}`);
+    if ((err as NodeJS.ErrnoException).code !== 'ENOENT') console.error(`[sapling-tv] config.json could not be read: ${String(err).slice(0, 200)}`);
     return { keys: {} };
   }
   const { config, problems } = parseConfig(raw);
-  for (const problem of problems) console.error(`[tropic-video] config.json: ${problem}`);
+  for (const problem of problems) console.error(`[sapling-tv] config.json: ${problem}`);
   return config;
 }
 let userConfig: UserConfig = { keys: {} };
@@ -96,14 +96,14 @@ function createWindow(ready: Promise<void>): BrowserWindow {
     fullscreen: flag('fullscreen') || (!options.dev && !options.spike),
     backgroundColor: '#000000',
     autoHideMenuBar: true,
-    title: 'Tropic Video',
+    title: 'Sapling TV',
     webPreferences: {
       preload: join(__dirname, 'preload.js'),
       contextIsolation: true,
       sandbox: true,
       nodeIntegration: false,
       webSecurity: true,
-      additionalArguments: [`--tropic-boot=${boot}`],
+      additionalArguments: [`--sapling-boot=${boot}`],
     },
   });
   win.removeMenu();
@@ -124,7 +124,7 @@ function createWindow(ready: Promise<void>): BrowserWindow {
   let retryAttempt = 0;
   wc.on('did-fail-load', (_e, code, description, url, isMainFrame) => {
     if (!isMainFrame || !isLoadFailure(code, url)) return;
-    console.error(`[tropic-video] page failed to load (${code} ${description}): ${describeBlockedUrl(url)}`);
+    console.error(`[sapling-tv] page failed to load (${code} ${description}): ${describeBlockedUrl(url)}`);
     if (blockReason(url, options)) return;
     retryAttempt += 1;
     const wait = retryDelaySeconds(retryAttempt);
@@ -138,7 +138,7 @@ function createWindow(ready: Promise<void>): BrowserWindow {
     if (!url.startsWith('data:') && url !== 'about:blank') retryAttempt = 0;
   });
   wc.on('render-process-gone', (_e, details) => {
-    console.error(`[tropic-video] renderer exited: ${details.reason}`);
+    console.error(`[sapling-tv] renderer exited: ${details.reason}`);
   });
 
   // True once a real page has been shown. Until then a refused navigation
@@ -152,9 +152,9 @@ function createWindow(ready: Promise<void>): BrowserWindow {
   const allowed = (url: string): boolean => {
     const reason = blockReason(url, options);
     if (!reason) return true;
-    console.error(`[tropic-video] blocked navigation (${reason}): ${describeBlockedUrl(url)}`);
+    console.error(`[sapling-tv] blocked navigation (${reason}): ${describeBlockedUrl(url)}`);
     if (pageShown) {
-      wc.send('tropic:notice', blockedMessage(reason));
+      wc.send('sapling:notice', blockedMessage(reason));
     } else {
       // Deferred so the refused navigation is fully cancelled first.
       setImmediate(() => {
@@ -204,7 +204,7 @@ function createWindow(ready: Promise<void>): BrowserWindow {
   let awayTimer: NodeJS.Timeout | undefined;
   const away = (): void => {
     if (wc.isDestroyed()) return;
-    wc.send('tropic:away');
+    wc.send('sapling:away');
     wc.setAudioMuted(true);
     awayAt = Date.now();
     clearTimeout(awayTimer);
@@ -243,7 +243,7 @@ function createWindow(ready: Promise<void>): BrowserWindow {
 function wireMessages(): void {
   let blocker: number | undefined;
   let nudge = false;
-  ipcMain.on('tropic:msg', (event, msg: BridgeMessage) => {
+  ipcMain.on('sapling:msg', (event, msg: BridgeMessage) => {
     // Only the top frame of our own window may talk to the shell.
     if (event.senderFrame !== event.sender.mainFrame) return;
     switch (msg.kind) {
@@ -364,7 +364,7 @@ async function main(): Promise<void> {
         widevine = `component error: ${String(err)}`;
       }
     }
-    console.log('[tropic-video] widevine component:', JSON.stringify(widevine));
+    console.log('[sapling-tv] widevine component:', JSON.stringify(widevine));
     if (options.spike) {
       spikeReport = {
         startedAt: new Date().toISOString(),
@@ -374,7 +374,7 @@ async function main(): Promise<void> {
         events: [],
       };
       saveSpikeReport();
-      console.log('[tropic-video] spike report:', join(app.getPath('userData'), 'spike-report.json'));
+      console.log('[sapling-tv] spike report:', join(app.getPath('userData'), 'spike-report.json'));
     }
   })();
 

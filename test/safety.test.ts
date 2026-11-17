@@ -184,7 +184,7 @@ describe('navigation allowlist', () => {
 describe('user agent', () => {
   it('removes app tokens and keeps the real engine and OS', () => {
     const ua =
-      'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) tropic-video/0.0.1 Chrome/146.0.0.0 Electron/44.10.1 Safari/537.36';
+      'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) sapling-tv/0.0.1 Chrome/146.0.0.0 Electron/44.10.1 Safari/537.36';
     expect(browserUserAgent(ua)).toBe(
       'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36',
     );
@@ -201,7 +201,7 @@ describe('about panel', () => {
   });
 
   it('shows the version when it has one', () => {
-    expect(aboutTitle('0.0.1')).toBe('Tropic Video 0.0.1');
-    expect(aboutTitle(undefined)).toBe('Tropic Video');
+    expect(aboutTitle('0.0.1')).toBe('Sapling TV 0.0.1');
+    expect(aboutTitle(undefined)).toBe('Sapling TV');
   });
 });

@@ -3,7 +3,7 @@
 // leak out. Styles use a constructed stylesheet, which page CSP does not block.
 import type { OskKey } from '../../shared/osk';
 
-export const HOST_TAG = 'tropic-overlay';
+export const HOST_TAG = 'sapling-overlay';
 
 const CSS = `
 :host {

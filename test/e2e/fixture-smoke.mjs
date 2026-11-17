@@ -16,7 +16,7 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const electronPath = createRequire(import.meta.url)('electron');
 const port = 9300 + Math.floor(Math.random() * 500);
 const fixture = pathToFileURL(join(root, 'test/fixtures/home.html')).href;
-const userData = mkdtempSync(join(tmpdir(), 'tropic-video-e2e-'));
+const userData = mkdtempSync(join(tmpdir(), 'sapling-tv-e2e-'));
 
 const child = spawn(
   electronPath,
@@ -100,11 +100,11 @@ try {
     await cdp.send('Input.dispatchKeyEvent', { type: 'keyUp', ...base });
     await sleep(150);
   };
-  const focused = () => evaluate('document.querySelector("[data-tropic-focus]")?.id ?? null');
+  const focused = () => evaluate('document.querySelector("[data-sapling-focus]")?.id ?? null');
 
   await sleep(800);
-  check('layer overlay is present', await evaluate('!!document.querySelector("tropic-overlay")'), true);
-  check('page cannot see any app API', await evaluate('typeof window.require + typeof window.tropicVideo + typeof window.electron'), 'undefinedundefinedundefined');
+  check('layer overlay is present', await evaluate('!!document.querySelector("sapling-overlay")'), true);
+  check('page cannot see any app API', await evaluate('typeof window.require + typeof window.saplingTv + typeof window.electron'), 'undefinedundefinedundefined');
 
   await press('ArrowDown');
   check('first press focuses the top-left control', await focused(), 'nav-home');
@@ -149,7 +149,7 @@ try {
   check('right never jumps diagonally out of a row', await focused(), 'rent');
 
   const ua = await evaluate('navigator.userAgent');
-  check('user agent hides nothing but the app tokens', /Electron|tropic-video/i.test(ua) === false && /Linux/.test(ua) && /Chrome\//.test(ua), true);
+  check('user agent hides nothing but the app tokens', /Electron|sapling-tv/i.test(ua) === false && /Linux/.test(ua) && /Chrome\//.test(ua), true);
 
   // On-screen keyboard: the search key focuses the field and a remote can type into it.
   await press('/');
@@ -261,7 +261,7 @@ try {
   });
   await new Promise((r) => server.listen(0, '127.0.0.1', r));
   const port2 = port + 1;
-  const userData2 = mkdtempSync(join(tmpdir(), 'tropic-video-e2e-'));
+  const userData2 = mkdtempSync(join(tmpdir(), 'sapling-tv-e2e-'));
   let log2 = '';
   const child2 = spawn(
     electronPath,
@@ -332,7 +332,7 @@ try {
 {
   const playerFixture = pathToFileURL(join(root, 'test/fixtures/player.html')).href;
   const port3 = port + 2;
-  const userData3 = mkdtempSync(join(tmpdir(), 'tropic-video-e2e-'));
+  const userData3 = mkdtempSync(join(tmpdir(), 'sapling-tv-e2e-'));
   // A user config file: one remapped key, one mistake that must be reported and ignored.
   writeFileSync(join(userData3, 'config.json'), JSON.stringify({ keys: { F2: 'playPause', F3: 'explode' } }));
   let log3 = '';
@@ -364,7 +364,7 @@ try {
       await cdp.send('Input.dispatchKeyEvent', { type: 'keyUp', ...base });
       await sleep(wait);
     };
-    const focusId = () => evaluate('document.querySelector("[data-tropic-focus]")?.id ?? null');
+    const focusId = () => evaluate('document.querySelector("[data-sapling-focus]")?.id ?? null');
     await sleep(1500);
     check('the fixture player is playing', await evaluate('!document.getElementById("v").paused && document.getElementById("v").currentTime > 0'), true);
 
@@ -378,7 +378,7 @@ try {
     await press('ArrowRight');
     await press('ArrowLeft');
     check('seek keys reach the player once each', await evaluate('[__p.left, __p.right]'), [1, 1]);
-    check('the layer did not move the picture itself', await evaluate('document.querySelector("[data-tropic-focus]") === null'), true);
+    check('the layer did not move the picture itself', await evaluate('document.querySelector("[data-sapling-focus]") === null'), true);
 
     await press('ArrowDown', 900);
     check('down reveals the player controls and focuses one', [await focusId(), (await evaluate('__p.moves')) > 0, await evaluate('document.hasFocus()')], ['pp', true, true]);
@@ -420,7 +420,7 @@ try {
   const sitePort = probe.address().port;
   await new Promise((r) => probe.close(r));
   const port4 = port + 3;
-  const userData4 = mkdtempSync(join(tmpdir(), 'tropic-video-e2e-'));
+  const userData4 = mkdtempSync(join(tmpdir(), 'sapling-tv-e2e-'));
   let log4 = '';
   const child4 = spawn(
     electronPath,

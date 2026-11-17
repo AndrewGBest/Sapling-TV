@@ -43,7 +43,7 @@ function noticePage(title: string, heading: string, paragraphs: readonly string[
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>Tropic Video: ${escapeHtml(title)}</title>
+<title>Sapling TV: ${escapeHtml(title)}</title>
 <style>
   html, body { height: 100%; margin: 0; background: #000; color: #eee; font: 3.6vh/1.5 system-ui, sans-serif; }
   main { box-sizing: border-box; height: 100%; max-width: 80vw; margin: 0 auto; display: flex; flex-direction: column; justify-content: center; gap: 2vh; }

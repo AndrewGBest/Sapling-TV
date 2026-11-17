@@ -22,7 +22,7 @@ beforeEach(() => {
     <div id="row2">${card('b1', 0, 200)}${card('b2', 120, 200)}</div>
     ${card('hidden', 360, 100, 'style="display:none"')}
     <div aria-hidden="true">${card('inert', 360, 200)}</div>
-    <tropic-overlay>${card('ours', 480, 100)}</tropic-overlay>
+    <sapling-overlay>${card('ours', 480, 100)}</sapling-overlay>
     <div role="button" id="wrapper" data-rect="0,300,300,80"><button id="inner" data-rect="10,310,80,40">go</button></div>
     <button id="tiny" data-rect="600,0,1,1">.</button>
     <button id="off" disabled data-rect="600,100,100,60">off</button>`;
@@ -32,13 +32,13 @@ const ids = (els: Element[]): string[] => els.map((e) => e.id).sort();
 
 describe('SpatialNavigator', () => {
   it('collects only visible, enabled, non-layer controls and prefers inner controls', () => {
-    const nav = new SpatialNavigator(document, { ignoreWithin: 'tropic-overlay' });
+    const nav = new SpatialNavigator(document, { ignoreWithin: 'sapling-overlay' });
     expect(ids(nav.candidates())).toEqual(['a1', 'a2', 'a3', 'b1', 'b2', 'home', 'inner', 'store']);
   });
 
   it('starts at the top-left and walks the grid', () => {
     const seen: string[] = [];
-    const nav = new SpatialNavigator(document, { ignoreWithin: 'tropic-overlay', onFocusChange: (el) => seen.push(el?.id ?? '-') });
+    const nav = new SpatialNavigator(document, { ignoreWithin: 'sapling-overlay', onFocusChange: (el) => seen.push(el?.id ?? '-') });
     nav.move('down');
     nav.move('down');
     nav.move('right');
@@ -51,14 +51,14 @@ describe('SpatialNavigator', () => {
   });
 
   it('stays put at an edge', () => {
-    const nav = new SpatialNavigator(document, { ignoreWithin: 'tropic-overlay' });
+    const nav = new SpatialNavigator(document, { ignoreWithin: 'sapling-overlay' });
     nav.move('down');
     expect(nav.move('left')).toBe(false);
     expect(nav.focused?.id).toBe('home');
   });
 
   it('activates the focused control', () => {
-    const nav = new SpatialNavigator(document, { ignoreWithin: 'tropic-overlay' });
+    const nav = new SpatialNavigator(document, { ignoreWithin: 'sapling-overlay' });
     let clicked = 0;
     document.getElementById('home')!.addEventListener('click', (e) => {
       e.preventDefault();
@@ -71,7 +71,7 @@ describe('SpatialNavigator', () => {
   });
 
   it('recovers when the focused element is removed', () => {
-    const nav = new SpatialNavigator(document, { ignoreWithin: 'tropic-overlay' });
+    const nav = new SpatialNavigator(document, { ignoreWithin: 'sapling-overlay' });
     nav.move('down');
     document.getElementById('home')!.remove();
     expect(nav.focused).toBeNull();

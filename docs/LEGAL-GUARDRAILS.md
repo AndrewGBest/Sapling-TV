@@ -6,7 +6,7 @@ have a lawyer review it. Items marked **[Guess]** are reasoning without a source
 
 ## The position this project takes
 
-Tropic Video is a web browser with a different remote control. It loads the
+Sapling TV is a web browser with a different remote control. It loads the
 service's public website in a Chromium engine, the user signs in on the
 service's own page, and video plays through the browser's standard protected
 media path. On top, the app draws its own focus ring and menus and turns
@@ -59,10 +59,10 @@ device serial (see `DESIGN.md` section 2 for what was found in one such repo).
 
 Every release, the README and the About screen carry:
 
-> Tropic Video is an unofficial, independent project. It is not affiliated
+> Sapling TV is an unofficial, independent project. It is not affiliated
 > with, endorsed by or supported by Amazon. Prime Video and Amazon are
 > trademarks of Amazon.com, Inc. or its affiliates. A valid subscription is
-> required. Tropic Video does not provide, unlock or bypass access to any
+> required. Sapling TV does not provide, unlock or bypass access to any
 > content and does not remove or work around DRM.
 
 ## Sources

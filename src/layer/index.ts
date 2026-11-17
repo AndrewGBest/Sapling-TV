@@ -383,7 +383,7 @@ export function startLayer({ doc, options, adapter, send }: LayerDeps): Layer {
   };
 
   const dispatch = (a: Action): void => {
-    doc.documentElement.classList.add('tropic-no-pointer');
+    doc.documentElement.classList.add('sapling-no-pointer');
     // A pending "pick focus up again" belongs to the previous key; a new key
     // overrides it (Back right after Enter must not have focus put back).
     view.clearTimeout(refocusTimer);
@@ -538,7 +538,7 @@ export function startLayer({ doc, options, adapter, send }: LayerDeps): Layer {
   const onPointer = (): void => {
     // The shell's own nudge (see revealControls) is not the user reaching for a mouse.
     if (Date.now() < ignorePointerUntil) return;
-    doc.documentElement.classList.remove('tropic-no-pointer');
+    doc.documentElement.classList.remove('sapling-no-pointer');
   };
   view.addEventListener('mousemove', onPointer, { passive: true });
 
@@ -551,7 +551,7 @@ export function startLayer({ doc, options, adapter, send }: LayerDeps): Layer {
     const v = findMainVideo(doc, playerRoots);
     const playing = !!v && !v.paused && !v.ended;
     // Mark the player so the stylesheet can hide controls the site has disabled.
-    if (v && inPlayer()) playerScope(v, playerRoots).setAttribute('data-tropic-player', '');
+    if (v && inPlayer()) playerScope(v, playerRoots).setAttribute('data-sapling-player', '');
     // Focus left over from the page behind must not carry into the player, and
     // the ring must not sit on the picture unless the user is on a control.
     // (onPlayerControl drops focus that is outside the player. Focus on a

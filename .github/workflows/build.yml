@@ -34,7 +34,7 @@ jobs:
         run: npx electron-builder --linux flatpak --publish never
       - uses: actions/upload-artifact@v4
         with:
-          name: tropic-video-linux-x64
+          name: sapling-tv-linux-x64
           path: |
             release/*.AppImage
             release/*.tar.gz

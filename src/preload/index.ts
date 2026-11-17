@@ -6,7 +6,7 @@ import type { BridgeMessage, LayerOptions } from '../shared/actions';
 import { parseAdapter } from '../layer/adapter/adapter';
 import { startLayer, type Layer } from '../layer/index';
 
-const ARG_PREFIX = '--tropic-boot=';
+const ARG_PREFIX = '--sapling-boot=';
 
 function readBoot(): { options: LayerOptions; adapter: unknown } {
   const fallback = { options: { dev: false, automation: false, spike: false }, adapter: null };
@@ -20,18 +20,18 @@ function readBoot(): { options: LayerOptions; adapter: unknown } {
 }
 
 const boot = readBoot();
-const send = (msg: BridgeMessage): void => ipcRenderer.send('tropic:msg', msg);
+const send = (msg: BridgeMessage): void => ipcRenderer.send('sapling:msg', msg);
 
 let layer: Layer | undefined;
 
 // From the shell to the layer: a line of text to show. It arrives in
 // the isolated world; the page's own scripts never see it.
-ipcRenderer.on('tropic:notice', (_event, text: unknown) => {
+ipcRenderer.on('sapling:notice', (_event, text: unknown) => {
   if (typeof text === 'string') layer?.notice(text.slice(0, 200));
 });
 
 // The window is no longer the one in front.
-ipcRenderer.on('tropic:away', () => layer?.away());
+ipcRenderer.on('sapling:away', () => layer?.away());
 
 const start = (): void => {
   // Only the top frame gets a layer; embedded frames are left alone.

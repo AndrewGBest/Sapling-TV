@@ -1,5 +1,5 @@
 {
-  "name": "tropic-video",
+  "name": "sapling-tv",
   "version": "0.1.1",
   "description": "Unofficial Prime Video for TV on Linux. Not affiliated with Amazon.",
   "private": true,
@@ -18,9 +18,9 @@
     "live:walk": "node test/live/walk.mjs"
   },
   "build": {
-    "appId": "io.github.andrewgbest.TropicVideo",
-    "productName": "Tropic Video",
-    "artifactName": "TropicVideo-${arch}.${ext}",
+    "appId": "io.github.andrewgbest.SaplingTV",
+    "productName": "Sapling TV",
+    "artifactName": "SaplingTV-${arch}.${ext}",
     "electronDownload": {
       "mirror": "https://github.com/castlabs/electron-releases/releases/download/"
     },
@@ -81,6 +81,6 @@
     "typescript": "^5.7.0",
     "vitest": "^3.0.0"
   },
-  "author": "Tropic Video contributors",
-  "desktopName": "io.github.andrewgbest.TropicVideo.desktop"
+  "author": "Sapling TV contributors",
+  "desktopName": "io.github.andrewgbest.SaplingTV.desktop"
 }
