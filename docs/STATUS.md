@@ -18,7 +18,7 @@ Update this at the end of every working session. Newest first.
 |---|---|
 | Checks pass | `npm run check` (202 unit tests) and `npm run e2e` |
 | Sign-in form from the remote, first step | Live, signed-out scratch profile, `--automation`: Enter on Sign In; a key brought the keyboard up on the email field; one letter typed and deleted through it; Down and Up reached the link, Continue and Close; Back with the keyboard up left the form open; Back closed it and focus returned to Sign In |
-| The form the site opens by itself (pressing play when the session has lapsed) gets the keyboard without a key press | Live, once: keyboard up on the email field |
+| The form the site opens by itself (seen when pressing play) gets the keyboard without a key press | Live, once: keyboard up on the email field |
 | Purchase guard, typing and Back inside frames | End-to-end fixture, including a zero-height frame from another origin holding the keys |
 | First key on a title page lands on the play button | Live, signed in |
 
@@ -35,11 +35,14 @@ Update this at the end of every working session. Newest first.
 
 ### Found, not fixed
 
-1. **The signed-in session lapsed for playback.** Pressing play now opens the
-   sign-in form, and the header shows a generic account icon. Likely cause,
-   not confirmed: the profile was created by Electron 44 and then opened by
-   Electron 42 (older Chromium), or the scratch copy used for the 42 test.
-   Andrew needs to sign in again before the player can be worked on.
+1. **Play asked for the account again.** Pressing play opened the site's
+   "Continue with Email Address" prompt instead of the player, and its
+   purchase service answered 401. The site still showed Andrew as signed in
+   (his account menu offers Sign Out), so an earlier note here calling the
+   session lapsed was wrong; the generic account icon is only the account
+   photo failing to load. Cause unknown: possibly a check the site makes
+   before playing on the web, possibly the profile having been opened by
+   two Electron versions.
 2. **Intermittent stall of the sign-in prompt** (spinner, blank account
    frame): see the open risk in `DECISIONS.md`.
 3. The site was flaky during these runs: its account service returned
@@ -52,8 +55,8 @@ Update this at the end of every working session. Newest first.
 
 ### Next actions
 
-1. Andrew: sign in again (and, if willing, try it with only arrows, Enter and
-   Back; the password step is the untested part).
+1. Find out why play asks for the account again; Andrew completes that
+   prompt if it is needed (the password step is the untested part).
 2. Player from the remote: play/pause, seek, the site's controls, Back.
 3. The profile picker when it next appears.
 
