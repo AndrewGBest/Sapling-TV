@@ -1,7 +1,7 @@
 {
   "name": "sapling-tv",
-  "version": "0.1.1",
-  "description": "Unofficial TV-style front end for watching Apple TV on Linux. Not affiliated with Apple.",
+  "version": "0.2.0",
+  "description": "Unofficial TV-style app for watching Apple TV on Linux, built on the Longboard browser. Not affiliated with Apple.",
   "private": true,
   "license": "GPL-3.0-only",
   "main": "dist/main.js",
@@ -12,10 +12,10 @@
     "test:watch": "vitest",
     "check": "npm run typecheck && npm run test && npm run build && node scripts/check-rules.mjs",
     "start": "npm run build && electron . --dev",
-    "spike": "npm run build && electron . --spike",
-    "e2e": "npm run build && node test/e2e/fixture-smoke.mjs",
+    "tv": "npm run build && electron .",
+    "e2e": "npm run build && node test/e2e/run.mjs",
     "dist": "npm run build && electron-builder --linux",
-    "live:walk": "node test/live/walk.mjs"
+    "live:walk": "npm run build && node test/live/walk.mjs"
   },
   "build": {
     "appId": "io.github.andrewgbest.SaplingTV",
@@ -26,7 +26,7 @@
     },
     "files": [
       "dist/**",
-      "adapters/**",
+      "profiles/**",
       "assets/**",
       "package.json"
     ],
@@ -74,10 +74,11 @@
   },
   "devDependencies": {
     "@types/node": "^22.10.0",
-    "electron": "github:castlabs/electron-releases#v42.11.18+wvcus",
+    "electron": "github:castlabs/electron-releases#v45.2.1+wvcus",
     "electron-builder": "^26.0.0",
     "esbuild": "^0.25.0",
     "jsdom": "^26.0.0",
+    "longboard": "github:AndrewGBest/Longboard#304caf931ec63d6937d3798953cd1c5201899190",
     "typescript": "^5.7.0",
     "vitest": "^3.0.0"
   },

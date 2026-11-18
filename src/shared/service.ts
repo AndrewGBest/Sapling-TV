@@ -1,16 +1,12 @@
-// The one place that says which streaming service this app is for. The rest
-// of the code is service-neutral; to point the layer at another service,
-// change this file, `src/main/hosts.ts`, the adapter and the notice in
-// `src/shared/about.ts`.
+// The one place that says which streaming service this app is for. Everything
+// else is Longboard (the browser underneath), plus the profile in `profiles/`
+// and the notice in `about.ts`.
 
-/** The app's own name, shown in the window title, the About panel and notice pages. */
+/** The app's own name: the window title and the About panel. */
 export const APP_NAME = 'Sapling TV';
 
-/** Prefix for lines the app writes to the terminal. */
+/** Prefix for lines this app's own start-up code writes to the terminal. Longboard's parts say "[longboard]". */
 export const LOG_PREFIX = '[sapling-tv]';
 
 /** Where the window starts: the service's normal website. */
 export const HOME_URL = 'https://tv.apple.com/';
-
-/** The site adapter file in `adapters/`. Selectors there need evidence (Hard rule 7). */
-export const ADAPTER_FILE = 'appletv.json';

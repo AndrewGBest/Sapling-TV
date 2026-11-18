@@ -1,82 +1,82 @@
-// Remote coverage walk for the live site. Presses one key repeatedly in an
-// app that is already running, and prints where the focus ring goes after
-// each press: structure and position only, never titles or text.
+// A walk of the live site in the real app: signed out (a throw-away data
+// folder), --automation (Hard rule 11), key presses only. It reports what a
+// script can see of the built-in profile at work, with none of the page's
+// words: which profile the menu names, whether Right turns a shelf past its
+// first screenful, whether the highlight ever rests on a card's "more"
+// button, and where the first key lands on a title's page.
 //
-// Start the app first, with the purchase guard on (Hard rule 10):
-//   npx electron . --dev --automation --remote-debugging-port=9222
-// then, for example:
-//   node test/live/walk.mjs ArrowDown 20
-//   node test/live/walk.mjs ArrowRight 6 --port=9222
+//   npm run live:walk
 //
-// Things to look for: NONE (focus was lost), OFFSCREEN (the ring is not
-// visible), an early "stopped" (a trap), or a jump in the scroll position
-// that skips part of the page. Record what you find in docs/STATUS.md.
-const args = process.argv.slice(2);
-const key = args[0];
-const max = Number(args[1] ?? 20);
-const port = Number(args.find((a) => a.startsWith('--port='))?.slice(7) ?? 9222);
-const VK = { ArrowUp: 38, ArrowDown: 40, ArrowLeft: 37, ArrowRight: 39 };
-if (!(key in VK) || !Number.isFinite(max)) {
-  console.error('usage: node test/live/walk.mjs <ArrowUp|ArrowDown|ArrowLeft|ArrowRight> [presses] [--port=9222]');
-  process.exit(2);
-}
+// It opens a window on the current display. It plays nothing and signs in to
+// nothing. Anything it prints is about structure; still, do not commit its
+// output without reading it.
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { launch, root, sleep, until } from '../e2e/harness.mjs';
 
-let targets;
-try {
-  targets = await (await fetch(`http://127.0.0.1:${port}/json/list`)).json();
-} catch {
-  console.error(`No app is listening on port ${port}. Start it with --automation --remote-debugging-port=${port}.`);
-  process.exit(2);
-}
-const page = targets.find((t) => t.type === 'page');
-const ws = new WebSocket(page.webSocketDebuggerUrl);
-let id = 0;
-const pending = new Map();
-ws.onmessage = (m) => {
-  const d = JSON.parse(m.data);
-  pending.get(d.id)?.(d);
-};
-const send = (method, params = {}) =>
-  new Promise((resolve) => {
-    pending.set(++id, resolve);
-    ws.send(JSON.stringify({ id, method, params }));
-  });
-await new Promise((resolve) => (ws.onopen = resolve));
-const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-
-// Runs in the page. Reports the focused element's tag, role, test id (with
-// anything id-like or personal masked), box and the scroll position.
-const probe = `(() => {
-  const e = document.querySelector('[data-sapling-focus]');
-  if (!e) return 'NONE';
-  const r = e.getBoundingClientRect();
-  const raw = e.getAttribute('data-testid') || e.getAttribute('data-automation-id') || e.closest('[data-testid]')?.getAttribute('data-testid') || '';
-  const name = raw.replace(/profile.*/i, 'profile-*').replace(/[0-9A-Z]{8,}/g, ':id').replace(/\\s.*/, '').slice(0, 34);
-  const on = r.bottom > 0 && r.top < innerHeight && r.right > 0 && r.left < innerWidth;
-  const role = e.getAttribute('role');
-  return [
-    e.tagName.toLowerCase() + (role ? '[' + role + ']' : ''),
-    name,
-    Math.round(r.left) + ',' + Math.round(r.top),
-    Math.round(r.width) + 'x' + Math.round(r.height) + (on ? '' : ' OFFSCREEN'),
-    'scroll ' + Math.round(scrollY) + '/' + Math.round(document.documentElement.scrollHeight - innerHeight),
-  ].join(' ');
+const profile = JSON.parse(readFileSync(join(root, 'profiles/tv.apple.com/profile.json'), 'utf8'));
+const HOME = 'https://tv.apple.com';
+const STATE = `(() => {
+  const f = document.querySelector('[data-longboard-focus]');
+  const r = f?.getBoundingClientRect();
+  return {
+    focus: f ? f.tagName.toLowerCase() + (f.getAttribute('data-testid') ? '[' + f.getAttribute('data-testid') + ']' : '') : null,
+    x: r ? Math.round(r.left) : null,
+    inShelf: !!f?.closest('[data-testid="shelf-component"]'),
+    item: f?.closest('li[data-test-id]')?.getAttribute('data-test-id')?.replace('shelf-grid-list-item-', '') ?? null,
+    onMore: !!f?.closest('[data-testid="lockup-context-menu"]'),
+  };
 })()`;
+let failed = 0;
+const say = (ok, what, detail = '') => {
+  if (!ok) failed += 1;
+  console.log(`${ok ? 'ok  ' : 'FAIL'} ${what}${detail ? `: ${detail}` : ''}`);
+};
 
-let last = '';
-let same = 0;
-for (let i = 1; i <= max; i++) {
-  const base = { key, code: key, windowsVirtualKeyCode: VK[key], nativeVirtualKeyCode: VK[key] };
-  await send('Input.dispatchKeyEvent', { type: 'rawKeyDown', ...base });
-  await send('Input.dispatchKeyEvent', { type: 'keyUp', ...base });
-  await sleep(650);
-  const value = (await send('Runtime.evaluate', { expression: probe, returnByValue: true })).result?.result?.value ?? 'ERROR';
-  console.log(String(i).padStart(2), value);
-  same = value === last ? same + 1 : 0;
-  last = value;
-  if (same >= 2) {
-    console.log('   stopped: no further movement');
-    break;
+// The real TV scale: a 1920x1080 window drawn at 960x540. No address: the app opens the service by itself.
+const app = await launch({ args: ['--zoom=2'], width: 1920, height: 1080 });
+try {
+  const page = await app.page(HOME, 200);
+  if (!page) throw new Error('the site did not open');
+  say(true, 'with no address given, the app opened the service');
+  await until(() => page.evaluate('document.readyState'), (s) => s === 'complete', 150, 200);
+  await sleep(6000);
+
+  let st;
+  for (let i = 0; i < 12; i++) {
+    await page.press('ArrowDown', 900);
+    st = await page.evaluate(STATE);
+    if (st.inShelf) break;
   }
+  say(st.inShelf, 'Down reaches a card in a shelf', JSON.stringify(st));
+  const seen = [];
+  let onMore = st.onMore;
+  for (let i = 0; i < 14; i++) {
+    await page.press('ArrowRight', 1100);
+    st = await page.evaluate(STATE);
+    seen.push(Number(st.item));
+    onMore ||= st.onMore;
+  }
+  say(Math.max(...seen) >= 8, 'Right turns the shelf past its first screenful', `cards ${seen.join(' ')}`);
+  say(!onMore, 'the highlight never rests on a card\'s "more" button');
+
+  const before = await page.evaluate('location.pathname');
+  await page.press('Enter', 500);
+  const after = await until(() => page.evaluate('location.pathname'), (p) => p !== before, 60, 200);
+  say(after !== before, 'OK on a card opens its page');
+  await sleep(6000);
+  await page.press('ArrowDown', 900);
+  say(await page.evaluate(`!!document.querySelector('[data-longboard-focus]')?.matches(${JSON.stringify(profile.focus.initial)})`), "the first key on a title's page lands on its main button");
+
+  const chrome = await app.chrome();
+  await page.press('ContextMenu', 800);
+  const menu = (await chrome.evaluate('document.body.innerText')).split('\n');
+  say(menu.some((l) => l.includes(`Profile: ${profile.name}`)), 'the menu names the profile in use', menu.find((l) => l.startsWith('Profile:')) ?? 'no profile line');
+  say(!menu.some((l) => /ad blocking/i.test(l)), 'the menu has no ad-blocking switch');
+  await page.press('ContextMenu', 400);
+} catch (err) {
+  say(false, 'the walk stopped', String(err).slice(0, 300));
+  console.log(app.log.split('\n').filter((l) => /\[(sapling-tv|longboard)\]/.test(l)).slice(-12).join('\n'));
 }
-process.exit(0);
+await app.close();
+process.exit(failed ? 1 : 0);

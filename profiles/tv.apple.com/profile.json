@@ -1,0 +1,30 @@
+{
+  "longboard": 1,
+  "id": "apple-tv",
+  "name": "Apple TV",
+  "version": "1.0.0",
+  "authors": [
+    "AndrewGBest"
+  ],
+  "licence": "CC0-1.0",
+  "match": {
+    "hosts": [
+      "tv.apple.com"
+    ]
+  },
+  "focus": {
+    "exclude": [
+      "[data-testid=\"lockup-context-menu\"] button"
+    ],
+    "initial": ".buttons-container button.theme-primary[data-testid=\"capsule-button\"]",
+    "scrollPrevious": [
+      "button[data-testid=\"shelf-button-left\"]"
+    ],
+    "scrollNext": [
+      "button[data-testid=\"shelf-button-right\"]"
+    ]
+  },
+  "evidence": {
+    "outline": "outline.txt"
+  }
+}
