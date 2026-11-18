@@ -6,14 +6,16 @@ Written for an AI agent working in a terminal there, and for Andrew.
 ## What the machine needs
 
 - A Linux desktop session (Wayland or X11). A headless VM works for the
-  fixture tests with `xvfb-run`, but protected playback and what the page looks
-  like need a real or virtual display that can be viewed.
-- Node.js 22 or newer, git, and network access to GitHub, the service and
-  Google's component servers (the Widevine component downloads on first run).
+  fixture tests with `xvfb-run`, but protected playback and what the page
+  looks like need a real or virtual display that can be viewed.
+- Node.js 22 or newer, git, and network access to GitHub (Longboard and
+  Electron are fetched from there), the service and Google's component
+  servers (the Widevine component downloads on first run).
 - Audio output is optional for development.
 
-Note for VMs: protected playback in a VM is **unverified**. If the spike fails
-in the VM, repeat it on bare metal before concluding anything.
+Protected playback in a VM was seen once with the 0.1.x app. With this
+build it is expected to fail anywhere until the Dolby audio problem is
+fixed (`DESIGN.md` section 3).
 
 ## First session checklist
 
@@ -21,81 +23,60 @@ in the VM, repeat it on bare metal before concluding anything.
 2. `npm run check` and `xvfb-run -a npm run e2e` (or `npm run e2e` on a
    desktop). Both must pass before changing anything.
 3. Read `CLAUDE.md`, then `docs/STATUS.md`.
-4. Run the spike. Unlike Tropic Video's service, this site's signed-out
-   pages load under `--automation`, so the agent can start
-   `npm run spike -- --automation --dev --remote-debugging-port=9222` and
-   Andrew signs in by hand in that window when it is on his screen.
-   - Andrew signs in by hand. The agent does not type credentials, codes or
-     the account email (Hard rule 9), and never chooses a profile.
-   - Start any included title and let it run for a minute.
-   - Quit with Ctrl+Q. The report path is printed in the terminal at start
-     (under `~/.config/` in a folder named after the app).
-5. Record the result in `docs/DECISIONS.md` and `docs/STATUS.md`.
-
-## Reading the spike report
-
-| Field | Good | Bad |
-|---|---|---|
-| `widevineComponent` | an object listing an installed component and version | an error string |
-| `eme-access` event | `ok: true` | `ok: false` |
-| `video` events | `playing` with a non-zero width and height, and later events with advancing `currentTime` | no `playing`, or only `waiting` |
-| `video-error` events | none | any |
-
-A site error message on screen with no `playing` event means the service
-refused the shell: go to the fallback in `DECISIONS.md`.
+4. The engine's own documents are in `node_modules/longboard/docs/`. A
+   checkout of Longboard and of Longboard-Profiles beside this one helps
+   when a problem turns out to be the engine's or the profile's.
 
 ## Driving the app as an agent
 
-Always start with `--automation`. Example:
+Always with `--automation`. The harness adds it and gives the app a
+throw-away data folder, so a run through it is signed out:
 
 ```
-npx electron . --dev --automation --remote-debugging-port=9222
+npm run live:walk
 ```
 
-Then connect over the DevTools protocol as `test/e2e/fixture-smoke.mjs` does:
-send key events with `Input.dispatchKeyEvent`, read state with
-`Runtime.evaluate`, and take screenshots with `Page.captureScreenshot`.
-Protected video will probably appear black in screenshots; judge playback from
-the video element's `paused` and `currentTime` instead. This site puts parts
-of its player inside shadow roots, so search them too when looking for the
-video. When playback fails, Chromium's own media diagnostics (the DevTools
-`Media` domain, the same data as `chrome://media-internals`) say which
-decoder failed; that is how the Dolby audio problem was found.
+That opens a window, lets the app open the service by itself, presses arrow
+keys and prints what it could see of the built-in profile at work (no titles
+or text). Extend `test/live/walk.mjs` for another page; it uses
+`test/e2e/harness.mjs`: `page.press`, `page.evaluate`, `page.focused`,
+`app.chrome()` for Longboard's own screens. The highlight is on the element
+carrying `data-longboard-focus`.
 
-To try another Electron version without risking the signed-in profile, copy
-the user data folder to a scratch place and pass `--user-data-dir=<copy>`. An
-older Chromium may not read a newer profile safely; never point one at the
-real folder.
+For a signed-in look, Andrew starts the app himself (`npm start`) and signs
+in; an agent then joins with
+`npx electron . --dev --automation --remote-debugging-port=9222` only when
+he asks. The agent does not type credentials, codes or the account email
+(Hard rule 10), and never chooses a profile.
 
-The signed-in profile lives in the app's user data folder and persists between
-runs. Never copy it, commit it or print its contents.
+Protected video will probably appear black in screenshots; judge playback
+from the video element's `paused` and `currentTime`. This site puts parts of
+its player inside shadow roots. When playback fails, Chromium's own media
+diagnostics (the DevTools `Media` domain) say which decoder failed; that is
+how the Dolby audio problem was found.
 
-## Walking a page with the remote
+The signed-in data lives in `~/.config/sapling-tv` and persists between
+runs. Never copy it into the repository, commit it or print its contents.
 
-To check that a page works from a remote, start the app as above and run:
+## Capturing page outlines for the profile
 
-```
-npm run live:walk -- ArrowDown 20
-```
-
-It presses the key that many times and prints where the focus ring went
-after each press (tag, test id, position, scroll position; no titles or
-text). Look for `NONE` (focus lost), `OFFSCREEN` (ring not visible), an early
-stop (a trap) or a jump in the scroll position that skips part of the page.
-Navigate to the page of interest first, walk it in all four directions, and
-record what you find in `STATUS.md`. Session 2's findings came from exactly
-this.
-
-## Capturing page outlines for the adapter
-
-1. Navigate to the page of interest (home, a title's detail page, search, the
+1. Navigate to the page of interest (home, a title's page, search, the
    profile picker, the player with controls showing).
-2. Press Ctrl+Shift+D. A file appears in `<user data>/diagnostics/`.
-3. Read the outline. It holds tag names, structural attributes and lengths only.
-   Confirm by eye that it has no titles or names before copying any of it.
-4. Add selectors to `adapters/appletv.json` only for things the outline
-   shows, bump `revision`, set `verified` to true, and add a trimmed copy of the
-   outline to `test/fixtures/outlines/` with a test that the selector matches.
+2. Press Ctrl+Shift+D, or choose "Save page outline" in the menu. A file
+   appears in `<data folder>/diagnostics/`.
+3. Read the outline. It holds tag names, structural attributes and lengths
+   only. Confirm by eye that it has no titles or names before copying any of
+   it.
+4. Add selectors to `profiles/tv.apple.com/profile.json` only for things the
+   outline shows, raise `version`, add the trimmed outline as a new `####`
+   page in `outline.txt`, add a test in `test/profile.test.ts` that the
+   selector matches what it should, and say in `NOTES.md` what was tried.
+5. Put the same three files in the Longboard-Profiles repository, run its
+   `npm run index` and `npm run check`, and send them there too.
+
+## Moving the Longboard pin
+
+See `CLAUDE.md`, "Moving the Longboard pin".
 
 ## Sharing the window
 

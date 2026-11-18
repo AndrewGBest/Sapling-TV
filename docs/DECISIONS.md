@@ -175,3 +175,93 @@ and dropped: it contradicts a tested rule and would stop on shelf titles
 from some columns but not others.
 **Reopen if:** signed out, the same selector matches the subscription button
 and starting there is unwelcome.
+
+## 2026-11-18: Rebuild Sapling TV as an app on Longboard (0.2.0)
+
+**Decision (Andrew):** convert Sapling TV to Longboard in two forms: a
+standalone Sapling TV app that runs on Longboard, and a Longboard profile for
+the service in the shared catalogue. This revives the name, which Longboard's
+own decision log had set aside ("each becomes a profile and a web-app entry").
+**How (the agent's choices, assumptions unless marked):**
+
+| Topic | Chosen | Why |
+|---|---|---|
+| How Longboard gets in | A dev dependency on its repository at one full commit, built from source by this repository's build | Nothing copied, so nothing to carry across by hand; a pin that moves in one line. A copy was how 0.1.x was made and its cost was exactly that |
+| Start-up | This repository's own `src/main/index.ts`, calling Longboard's `createBrowser` and friends, not Longboard's `index.ts` with a changed command line | Leaving ad blocking out, the app's own user-agent token and the start address cannot be set from the command line. The typecheck fails when Longboard changes what these modules take |
+| The About panel | Longboard's `shared/about` is swapped for this repository's at build time | The notice required for this service has to be in About, and Longboard's panel has no setting for its words. A test and the end-to-end run guard the swap |
+| Longboard's name on Home and in the menu | Left | Fixed text in Longboard's screens. The About panel says the app is built on Longboard |
+| The profile catalogue | Still fetched daily | A fix to the profile reaches the app without a release. Disclosed in About; `"catalogue": false` stops it |
+| Data folder | `~/.config/sapling-tv`, as before | An existing sign-in carries over. **Not checked** that a folder last opened by Electron 42 is read safely by 45 |
+| The 0.1.x layer, adapter, spike and host allowlist | Removed | Longboard does that work. They are in the history up to 25e5472 |
+
+**The old decisions above** about the layer (frames, adapter keys, the
+navigation allowlist, the Electron 42 pin, "start as a copy of Tropic Video")
+describe the 0.1.x app. They are kept as history and no longer describe the
+code.
+**Reopen if:** Longboard gains a supported way to build a named app on it;
+then use that and delete the start-up copy and the About swap.
+
+## 2026-11-18: Adopt Longboard's Hard rules; the navigation allowlist goes
+
+**Decision (Andrew, asked because the conversion conflicted with the old
+rule 12):** Sapling TV takes Longboard's rules. Longboard is a browser with a
+Home screen and an address tile and asks the person before a site gets the
+camera, location and the like; the old rule required a navigation allowlist
+and a fixed permission list. The alternatives offered were a locked
+single-site mode added to Longboard, or refusing other hosts from this
+repository's start-up code.
+**Consequence:** the app can open any website. Rules 13 (least privilege)
+and 14 (stay current) matter more than before.
+**Dropped with it:** the old rule 6 ("familiar layout, original material").
+The app no longer draws a layout of its own; what remains of the rule is in
+rules 1 and 6.
+
+## 2026-11-18: No ad blocking in this app
+
+**Decision (the agent's, offered with the question above and not objected
+to; an assumption until Andrew says otherwise):** Longboard's ad blocking is
+left out of Sapling TV: `adBlock.enabled` is false, no filter list is
+fetched, the menu has no switch. Hard rule 5.
+**Reason:** it keeps what Sapling TV promised before ("not an ad blocker,
+and never will be"). In Longboard itself the site is not on the verified
+list, so blocking would start on for it.
+**Cost:** `@ghostery/adblocker` is still bundled into `dist/main.js`, unused,
+because Longboard's window code imports the module that uses it (MPL-2.0;
+see Longboard's `DECISIONS.md`).
+**Not decided here:** whether the site goes on Longboard's verified list.
+That is a person's review, so Andrew's.
+
+## 2026-11-18: Ship on Longboard's Electron 45 although playback is expected to fail
+
+**Decision (Andrew):** finish on castLabs 45.2.1, the version the pinned
+Longboard uses, on the assumption that the Dolby audio problem will be fixed
+in Longboard. Not the 42 pin of 2026-11-17.
+**Evidence:** on 45.2.1 the browser says yes to AC-3 and E-AC-3 in
+`MediaSource.isTypeSupported`, `canPlayType` and Media Capabilities; on
+42.11.18 it says no to all three (both measured 2026-11-18 on a local page).
+The app's end-to-end run and live walk pass on both. Playback itself was not
+tried on 45.
+**Reason:** the 42 pin was accepted for a window that opened only the
+service's hosts. The app is now a browser; an out-of-support Chromium is a
+larger exposure, and the cause is the engine's, shared with Longboard.
+**Cost:** until the fix, expect the site's player to fail on protected
+titles. The README and `STATUS.md` say so first.
+**Reopen when:** Longboard has a fix (move the pin and try playback, signed
+in, with Andrew), or it turns out not to be fixable there.
+
+## 2026-11-18: The profile says only what the outlines show
+
+**Decision:** the Longboard profile carries the three things the adapter had
+(shelf arrows, cards' "more" buttons excluded, first highlight on a title
+page) and nothing about the player, search or purchase controls. Profile id
+`apple-tv`, folder `tv.apple.com`, one host matched exactly.
+**Reason:** Hard rule 8. No outline of the player, the search page or a
+purchase control exists yet.
+**Mapping:** `rowPrev`/`rowNext` to `focus.scrollPrevious`/`scrollNext`;
+`notFocusable` to `focus.exclude` (Longboard also leaves out anything inside
+an excluded element; the selector names the button itself, and a test checks
+the card is not inside it); `initialFocus` to `focus.initial`.
+**Seen, signed out, on a home page:** the `focus.initial` selector matched 11
+elements there (the banner's buttons). The first key landed on the first.
+Not looked at further.
+

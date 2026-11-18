@@ -1,7 +1,7 @@
 ---
 name: Navigation broke (the site changed)
 about: Focus gets stuck, skips things, or a control cannot be reached
-labels: adapter
+labels: profile
 ---
 
 **What page were you on?** (home, a title's page, search, the player, profile picker)

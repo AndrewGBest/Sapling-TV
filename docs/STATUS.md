@@ -2,6 +2,84 @@
 
 Update this at the end of every working session. Newest first.
 
+## 2026-11-18: 0.2.0, rebuilt on Longboard (branch `longboard`)
+
+Andrew asked for Sapling TV to be converted to Longboard, his browser for
+TVs, in two forms. Both are done. **The app does not yet do the one thing it
+is for: see "Expected to fail" below.**
+
+### Changed
+
+- **The profile.** `profiles/tv.apple.com/` in the Longboard-Profiles
+  repository (pushed to its `main`): the adapter's three entries in
+  Longboard's format, with the outlines and notes.
+- **The app.** This repository no longer has a layer of its own. It builds
+  Longboard from source at commit 304caf9 with its own start-up
+  (`src/main/index.ts`): opens the service, ad blocking left out, the same
+  profile built in, Sapling TV's notice in About. Version 0.2.0, castLabs
+  Electron 45.2.1.
+- **The rules.** `CLAUDE.md` now carries Longboard's Hard rules with this
+  service's specifics (`DECISIONS.md`, 2026-11-18). The navigation allowlist
+  is gone: the app is a browser.
+- Removed: `src/layer`, the adapter, the spike, the old tests and walk tool.
+
+### Verified, and how
+
+| Claim | Evidence |
+|---|---|
+| Checks pass | `npm run check`: typecheck, 19 unit tests, build, rule checks |
+| The app is Longboard under Sapling TV's identity | `npm run e2e`, 16 checks on a made-up page: user agent with no shell or app token; nothing exposed to the page; the highlight moves; a trial button is not pressed under `--automation`; no ad-blocking switch; About shows the app's title, notice and background-requests text; the built-in profile is loaded; nothing is fetched |
+| The app on the live site, signed out | `npm run live:walk`, United States storefront, a 1920x1080 window at 960x540, by script: with no address it opened the service; Down reached a shelf; Right went through cards 1 to 11, landing on the first card shown after each turn; never on a "more" button; OK opened a title's page; the first key there landed on the main button; the menu said "Profile: Apple TV (reviewed, built in)" and had no ad-blocking line |
+| The profile inside Longboard itself | The same walk in Longboard (304caf9) with the profile placed as a catalogue profile: same results; the menu said "(reviewed)" |
+| The engine claims Dolby audio | `MediaSource.isTypeSupported`, `canPlayType` and Media Capabilities say yes to `ac-3` and `ec-3` on castLabs 45.2.1, no on 42.11.18. Local page, both measured today |
+| The package starts | `electron-builder --linux dir`, then the unpacked program started once with `--automation`: profiles read, Widevine component reported |
+
+### Expected to fail
+
+- **Playing a protected title.** The engine claims Dolby audio it cannot
+  decode on Linux, which is what stopped the player on castLabs 44 on
+  2026-11-17. Not tried on 45. Andrew chose to ship on 45 and wait for a fix
+  in Longboard; a description of the problem was written for the Longboard
+  session.
+
+### Not verified
+
+- Anything signed in with this build: the data folder from 0.1.x (last
+  opened by Electron 42) being read by 45, the profile picker, title pages
+  with a subscription.
+- Sign-in. The form is in a frame; Longboard has no layer there, so it needs
+  pointer mode. The 0.1.x app could do the first step with the highlight.
+- The player, search, the on-screen keyboard on this site, a game
+  controller, a real remote, a real TV. Nobody looked at the screen.
+- The AppImage, tarball and Flatpak from this tree; the CI workflows (not
+  run since the change; `npm ci` there has to fetch Longboard from GitHub).
+- The catalogue fetch in this app (scripted runs do not fetch).
+- Everything Longboard says is unverified about itself (its `STATUS.md`).
+
+### Known limits
+
+- Home's heading and the menu's Quit say "Longboard".
+- An app added from the menu gets a desktop entry under Longboard's ID
+  (`ARCHITECTURE.md`).
+- The page layer writes nothing about the profile to the terminal; the menu
+  is where to see which profile is in use.
+- When the unpacked package was started once with `--url=about:blank`, the
+  address was treated as words to search for: about 25 seconds on a search
+  engine's page, full screen, under `--automation`. Nothing was pressed.
+
+### Next actions
+
+1. Andrew: review and merge the branch (or not). It is not pushed.
+2. Longboard: the Dolby claim. Then move the pin here and try playback,
+   signed in, with Andrew at the window.
+3. Andrew: whether the site goes on Longboard's verified list (ad blocking
+   starts on for it in Longboard today).
+4. Sign in with pointer mode; then the walks in `ROADMAP.md` phase 2.
+
+**Everything below this line describes the 0.1.x app**, which had its own
+layer and ran on castLabs Electron 42. It is history, not the state of this
+tree.
+
 ## 2026-11-17: session 1, later: frames, first focus, keyboard placement
 
 ### Changed

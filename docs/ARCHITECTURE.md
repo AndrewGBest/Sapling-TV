@@ -1,141 +1,100 @@
 # Architecture
 
-How the code is actually built. For why this approach was chosen, see `DESIGN.md`.
+How the app is built since 0.2.0. For why, see `DESIGN.md` and the
+2026-11-18 entries in `DECISIONS.md`. For how the engine itself works (the
+window and its views, the navigation layer, profiles, the purchase guard,
+permissions), read Longboard's `docs/ARCHITECTURE.md`; a copy is at
+`node_modules/longboard/docs/` after `npm install`.
 
-## Processes
-
-```
-main process (src/main)                    renderer: the service's web page
-┌───────────────────────────┐              ┌────────────────────────────────────┐
-│ window, fullscreen        │   loadURL    │ main world: the site's own scripts │
-│ navigation allowlist      │ ───────────▶ │   (untouched, cannot see the app)  │
-│ permission allowlist      │              ├────────────────────────────────────┤
-│ user-origin tv.css        │  insertCSS   │ isolated world: preload + TV layer │
-│ sleep inhibit, diagnostics│ ◀──────────  │   shares the DOM, not the JS       │
-│ spike report              │  ipc sapling:msg │                                    │
-└───────────────────────────┘              └────────────────────────────────────┘
-```
-
-- **The layer runs in the preload's isolated world.** It can read and focus
-  DOM elements and listen for input, but the site's JavaScript cannot reach it
-  and it does not patch the site's JavaScript.
-- **Nothing is exposed to the page.** There is no `contextBridge` API. The
-  end-to-end test asserts the page sees no app globals.
-- **One IPC channel, `sapling:msg`,** carrying the four message kinds in
-  `src/shared/actions.ts`. The main process accepts it only from the top frame.
-
-## Input pipeline
+## What is whose
 
 ```
-keyboard / IR remote / CEC helper ─┐
-                                   ├─▶ Action ─▶ dispatch ─▶ navigator | player | bridge
-gamepad (polled each frame) ───────┘
+this repository                         Longboard, at the pinned commit
+┌──────────────────────────────┐        ┌──────────────────────────────────────┐
+│ src/main/index.ts  start-up  │ calls  │ src/main/browser.ts   window, views, │
+│   opens the service          │ ─────▶ │   navigation rules, permissions,     │
+│   ad blocking: left out      │        │   downloads, Home, menu, profiles    │
+│   name, user-agent token     │        │ src/preload + src/layer   the layer  │
+│ src/shared/about.ts  notice  │ ─swap▶ │ src/chrome   Home, menu, About panel │
+│ profiles/tv.apple.com/       │ ─read▶ │ profile store, validator, matcher    │
+└──────────────────────────────┘        └──────────────────────────────────────┘
 ```
 
-Every device is reduced to an `Action` (`src/shared/actions.ts`) by a pure
-mapping function that takes the current mode:
+- **Longboard arrives as source**, as the dev dependency
+  `github:AndrewGBest/Longboard#<commit>`. Nothing of it is copied into this
+  repository, and nothing in `node_modules/longboard` is edited.
+- **`scripts/build.mjs`** makes the same three bundles Longboard's build
+  makes: `dist/main.js` from this repository's `src/main/index.ts` (which
+  imports Longboard's modules), and `dist/preload.js` and `dist/chrome.js`
+  straight from Longboard's entry points. Everything is bundled, so the
+  package has no runtime dependencies.
+- **One substitution at build time.** Wherever Longboard imports its
+  `shared/about` (the About panel's title, notice and background-requests
+  text), the build answers with `src/shared/about.ts` from here. That file
+  must export the same names; `test/about.test.ts` checks it, and the
+  end-to-end run reads the panel.
 
-- `browse`: arrows move focus, select clicks.
-- `player`: left/right seek, select toggles play. Active when the player's
-  video fills at least half the viewport and has started. The adapter's
-  `playerRoot` says where the player lives; without it, the largest unmuted
-  video is used. The layer never calls `play()`, `pause()` or sets
-  `currentTime`: it asks the shell to press Space, Left or Right, and the
-  site's own player acts on the key (see `src/shared/player-keys.ts`).
-- `text`: a text field has focus, so only Escape and up/down are intercepted.
+## Start-up (`src/main/index.ts`)
 
-## Spatial navigation (`src/layer/spatial`)
+The counterpart of Longboard's `src/main/index.ts`, kept as close to it as
+possible so the two can be compared when the pin moves. It differs in this:
 
-- `geometry.ts` is pure. An aligned candidate (sharing at least 25% of the
-  smaller element's extent on the cross axis) always beats an unaligned one.
-  Left/right never leave the row. Up/down fall back to the nearest row.
-- `navigator.ts` gathers visible, enabled controls, drops wrappers that contain
-  another candidate, and focuses with a `data-sapling-focus` attribute plus real DOM focus.
-- The focus ring is drawn by the overlay over the element's rectangle, so it
-  does not depend on the site's styles.
-
-## Site adapter (`adapters/appletv.json`)
-
-Data only: lists of selectors for extra focusable elements, the search field,
-shelf arrows (`rowPrev`, `rowNext`: pressed at a row's edge, never focused),
-controls that are never focus targets (`notFocusable`), the player's
-container and close control, and purchase controls. Parsed defensively; bad
-selectors are dropped. With an empty adapter the generic heuristics run.
-Revision 2 holds the shelf arrows and the cards' menu buttons, each shown by
-an outline in `test/fixtures/outlines/` and checked by
-`test/adapter-evidence.test.ts`.
-
-## Where the service is named
-
-| What | Where |
-|---|---|
-| App name, log prefix, start address, adapter file | `src/shared/service.ts` |
-| Hosts the window may load | `src/main/hosts.ts` |
-| Non-affiliation notice and About panel | `src/shared/about.ts` (kept word for word with the README and `LEGAL-GUARDRAILS.md` by a test) |
-| Spend wording and URL patterns | `src/layer/guard/purchase-guard.ts` |
-| Marks that must not appear in package names | `scripts/check-rules.mjs` |
-| Selectors | `adapters/appletv.json` |
-
-## Frames
-
-The preload runs in every frame (`nodeIntegrationInSubFrames`; no Node
-integration is involved), and each frame has its own layer in its own
-isolated world. Keys go to whichever frame has keyboard focus.
-
-| Hand-over | How |
-|---|---|
-| Page to frame | A frame at least 120x60 is a focus target; focusing it gives its window the keys, and its layer focuses a text field or the first control |
-| Frame to parent, at an edge | `frameEdge` message; the shell passes it to the parent frame, whose layer moves on from the frame's box |
-| Frame to parent, Back | First Back sends the site Escape; a second within four seconds sends `leaveFrame`, and the parent does its own Back |
-| A frame that shows nothing | Every key is handed to the parent |
-| Game controller | Read by the page; while a frame has the keys, each action goes page to shell to focused frame (`relay`), rebuilt by `sanitizeAction` |
-
-## Page scrolling
-
-Some sites keep the window still and scroll a screen-sized box inside it
-(this one does). `pageScroller()` in `navigator.ts` finds that box; the
-first-screenful rule, the lost-focus recovery and held-key scrolling measure
-and scroll in it, falling back to the window.
-
-## Safety mechanisms
-
-| Mechanism | Where | Tested by |
+| | Longboard | Sapling TV |
 |---|---|---|
-| Navigation allowlist (service + its account domains, https only) | `src/main/hosts.ts` | `test/safety.test.ts` |
-| Permission allowlist (fullscreen, protected media only) | `src/main/index.ts` | review |
-| Purchase guard in automation mode (clicks, key activation, form submits, URLs) | `src/layer/guard`, `src/main/index.ts` | unit + e2e |
-| Diagnostics outline carries no text, labels, links or IDs | `src/layer/diagnostics/outline.ts` | `test/safety.test.ts` |
-| Honest user agent | `src/main/hosts.ts` | unit + e2e |
-| Hard-rule scan | `scripts/check-rules.mjs` | `npm run check` |
+| Opens at start | Home, or an address or app given on the command line | The service (`HOME_URL`), unless an address or app is given. `startTarget` in `src/shared/start.ts`, unit-tested |
+| Ad blocking | A per-site switch; filter list fetched | Left out: `adBlock: { enabled: false }`, no filter store, nothing fetched (Hard rule 5) |
+| Verified-sites list | Read for the switch's starting position | Not read |
+| Built-in profiles | Longboard's `profiles/` | This repository's `profiles/` |
+| User agent | Electron and `longboard/` tokens removed | Electron token and this app's own token removed (`browserUserAgent`, unit-tested and read in the end-to-end run) |
+| Window title, terminal prefix | Longboard | Sapling TV, `[sapling-tv]` for this file's lines. Longboard's modules still say `[longboard]` |
+| Data folder | `~/.config/Longboard` | `~/.config/sapling-tv` (from the package name) |
 
-## Flags
+The same as Longboard: the single-instance lock, the wait for the Widevine
+component before the first site is loaded, the daily catalogue fetch in a
+cookie-less session of its own, `--dev`, `--automation`, `--zoom=`,
+`--size=`, `--downloads=`, `--catalogue=`.
 
-| Flag | Effect |
-|---|---|
-| `--dev` | Windowed; allows `--url=` for `file:` and localhost fixtures |
-| `--automation` | Installs the purchase guard and URL block. Required for any scripted or agent-driven run |
-| `--spike` | Records Widevine component status and video events to `spike-report.json` in the user data folder |
-| `--fullscreen` | Fullscreen even in dev |
-| `--remote-debugging-port=N` | Chromium's own flag; how the e2e harness and an agent drive the app |
+## What is still Longboard's name on screen
+
+Home's heading, "Quit Longboard" in the menu, and wording inside questions
+("shared with the rest of Longboard"). These are fixed text in Longboard's
+screens. The About panel says that the app is built on Longboard.
+
+An app added from the menu ("Add this site as an app") gets a desktop entry
+whose file name starts with Longboard's app ID
+(`io.github.andrewgbest.Longboard.app-<id>.desktop`), started with this
+app's program. If Longboard itself is installed and has an app with the same
+id, the two write the same file.
+
+## The profile
+
+`profiles/tv.apple.com/profile.json` is a Longboard format version 1 profile
+(Longboard's `docs/PROFILES.md`). It is loaded as a built-in profile. The
+same file is in the shared catalogue; a newer one there is downloaded and
+wins over the built-in copy (catalogue before built-in, Longboard's order),
+and a person's own profile in the data folder wins over both.
+
+What it says, and the outline lines that back each selector, are in
+`profiles/tv.apple.com/NOTES.md` and `outline.txt`.
+`test/profile.test.ts` rebuilds the outlined pages and checks every selector.
 
 ## Testing
 
-- **Unit (`npm test`):** geometry, input mapping and repeat timing, purchase
-  guard, outline sanitiser, adapter parsing, URL allowlist, user agent, and the
-  navigator against a jsdom page with supplied rectangles.
-- **End to end (`npm run e2e`):** launches the real app on `test/fixtures/home.html`
-  and drives it over the DevTools protocol with no extra dependencies. The same
-  harness is how an agent on a machine with a signed-in profile inspects the live site.
-- **Not testable without the live site:** protected playback, the real page's
-  markup, sign-in, the player mode detection against the real player.
+- **Unit tests** (`npm test`): the start target, the user agent, the About
+  words, the profile against Longboard's validator, matcher and its outline.
+- **End to end** (`npm run e2e`): the real app with `--automation` and a
+  throw-away data folder against a made-up page: identity, nothing exposed to
+  the page, the highlight moving, the purchase guard, no ad-blocking switch,
+  the About panel, the built-in profile loaded, nothing fetched. The harness
+  is Longboard's, copied, because Longboard's own resolves paths from its
+  own folder.
+- **Live walk** (`npm run live:walk`): the same harness on the live site,
+  signed out. See `VM-SETUP.md`.
+- The engine's behaviour is tested in Longboard (its unit tests and
+  end-to-end scenarios), at the commit pinned here.
 
-## Shell version
+## Packaging
 
-castLabs Electron 42.11.18 (Chromium 148), pinned because later castLabs
-builds advertise Dolby audio that Linux cannot decode; see `DECISIONS.md`,
-2026-11-17.
-
-## Not built yet
-
-Player support for controls inside shadow roots, CEC helper, adapter
-auto-update. See `ROADMAP.md`.
+`electron-builder`, as before: AppImage, tarball, and a Flatpak bundle built
+separately in CI. The package holds `dist/`, `profiles/`, `assets/` and
+`package.json`.
