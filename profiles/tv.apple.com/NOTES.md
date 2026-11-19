@@ -48,5 +48,6 @@ a shelf from a channel page (signed out) and the buttons of a title's page
   Dolby audio (AC-3, E-AC-3) that it cannot decode on Linux. Measured on
   castLabs Electron 45.2.1 on 2026-11-18; playback itself was not tried. A
   profile cannot change this.
-- Ad blocking: this site is not on the verified list, so Longboard starts
-  with the switch on here. What that does to the site was not looked at.
+- Ad blocking: the site is on the verified list (added 2026-11-18, the owner's
+  decision), so Longboard starts with the switch off here. Neither position
+  of the switch was tried on the site.

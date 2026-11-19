@@ -69,11 +69,12 @@ is for: see "Expected to fail" below.**
 
 ### Next actions
 
-1. Andrew: review and merge the branch (or not). It is not pushed.
-2. Longboard: the Dolby claim. Then move the pin here and try playback,
-   signed in, with Andrew at the window.
-3. Andrew: whether the site goes on Longboard's verified list (ad blocking
-   starts on for it in Longboard today).
+1. Longboard: the Dolby claim. Then move the pin here and try playback,
+   signed in, with Andrew at the window. Until then expect playback to fail.
+2. (Done 2026-11-18, Andrew: the site is on Longboard's verified list, so
+   ad blocking starts off for it in Longboard. Sapling TV has none either way.)
+3. (Done 2026-11-19: pushed to `main` on Andrew's instruction, with the
+   Dolby problem open and a fix expected from Longboard.)
 4. Sign in with pointer mode; then the walks in `ROADMAP.md` phase 2.
 
 **Everything below this line describes the 0.1.x app**, which had its own

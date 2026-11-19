@@ -230,6 +230,7 @@ because Longboard's window code imports the module that uses it (MPL-2.0;
 see Longboard's `DECISIONS.md`).
 **Not decided here:** whether the site goes on Longboard's verified list.
 That is a person's review, so Andrew's.
+(Later the same day Andrew added it: Longboard-Profiles commit fe8b6ec.)
 
 ## 2026-11-18: Ship on Longboard's Electron 45 although playback is expected to fail
 
